@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="../shared/fonts.css" />
+    <link rel="stylesheet" href="../shared/tokens.css" />
+    <link rel="stylesheet" href="settings.css" />
+    <title>Thread — Settings</title>
+  </head>
+  <body>
+    <div id="first-run" class="first-run hidden">
+      <div class="first-run-card">
+        <div class="fr-eyebrow">Before Thread starts</div>
+        <h1>What should Thread watch?</h1>
+        <p class="fr-copy">
+          Thread runs in the background and groups new items into Threads. Pick what it's allowed to watch —
+          you can change this anytime in Settings, and everything stays on this machine except the short
+          excerpts sent to Claude for classification (never full file contents).
+        </p>
+        <div id="fr-locations" class="fr-locations"></div>
+        <div class="fr-row">
+          <span>Clipboard</span>
+          <button class="switch on" id="fr-clipboard"><span class="knob"></span></button>
+        </div>
+        <button id="fr-start" class="btn-primary fr-start">Start Thread</button>
+      </div>
+    </div>
+
+    <div id="main" class="main hidden">
+      <header class="header">
+        <span class="dot pulse"></span>
+        <span class="header-title">Thread — Settings</span>
+      </header>
+
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="watching">Watching</button>
+        <button class="tab-btn" data-tab="items">Indexed items</button>
+        <button class="tab-btn" data-tab="privacy">Privacy</button>
+      </nav>
+
+      <section id="tab-watching" class="tab-panel">
+        <div class="panel-label">Watched locations</div>
+        <div id="locations-list" class="locations-list"></div>
+        <div class="row">
+          <span>Clipboard</span>
+          <button class="switch" id="clipboard-switch"><span class="knob"></span></button>
+        </div>
+      </section>
+
+      <section id="tab-items" class="tab-panel hidden">
+        <div class="panel-label">Everything Thread has indexed <span id="items-count"></span></div>
+        <div id="items-list" class="items-list"></div>
+      </section>
+
+      <section id="tab-privacy" class="tab-panel hidden">
+        <div class="panel-label">What's stored, what's sent</div>
+        <ul class="privacy-list">
+          <li><strong>Stored locally only:</strong> every file path, screenshot filename, clipboard snippet, and Thread — in a SQLite database on this machine (never uploaded anywhere).</li>
+          <li><strong>Sent to Anthropic (Claude):</strong> only the filename, a short excerpt (first ~300 characters of text content, never full files), and your existing Thread names/summaries — needed to decide where a new item belongs.</li>
+          <li><strong>Never sent anywhere:</strong> full file contents, images themselves, or anything outside the excerpt described above.</li>
+        </ul>
+        <div class="api-status" id="api-status"></div>
+        <p class="fine-print">This is a student/portfolio project, not a production tool — treat it accordingly if you share it.</p>
+      </section>
+    </div>
+
+    <script src="settings.js"></script>
+  </body>
+</html>

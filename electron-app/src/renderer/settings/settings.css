@@ -1,0 +1,236 @@
+html,
+body {
+  height: 100%;
+}
+.hidden {
+  display: none !important;
+}
+
+/* ---- first run ---- */
+.first-run {
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.first-run-card {
+  max-width: 440px;
+}
+.fr-eyebrow {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.first-run-card h1 {
+  font-family: var(--font-display);
+  font-size: 22px;
+  margin: 8px 0 10px;
+}
+.fr-copy {
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.6;
+  margin-bottom: 18px;
+}
+.fr-locations {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.fr-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  font-size: 13px;
+}
+.fr-start {
+  margin-top: 20px;
+  width: 100%;
+  padding: 11px;
+  font-size: 14px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #0f1512;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.switch {
+  width: 34px;
+  height: 19px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface-elevated-2);
+  position: relative;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.switch.on {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+}
+.switch .knob {
+  position: absolute;
+  top: 1.5px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: var(--text-faint);
+  transition: left 0.15s ease;
+}
+.switch.on .knob {
+  left: 16px;
+  background: var(--accent);
+}
+
+/* ---- main settings ---- */
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 20px 10px;
+}
+.header-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border-soft);
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  padding: 8px 12px;
+  font-size: 12.5px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panel {
+  padding: 18px 20px;
+  overflow-y: auto;
+  height: calc(100vh - 100px);
+}
+
+.panel-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-faint);
+  margin-bottom: 10px;
+}
+
+.locations-list,
+.items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 9px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 9px;
+  font-size: 13px;
+  margin-top: 16px;
+}
+
+.location-path {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+  margin-top: 2px;
+}
+
+.item-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: 8px;
+}
+.item-main {
+  flex: 1;
+  min-width: 0;
+}
+.item-name {
+  font-size: 12.5px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.item-meta {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.trash-btn {
+  background: transparent;
+  border: 1px solid var(--border-soft);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 11px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.privacy-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-dim);
+  font-size: 12.5px;
+  line-height: 1.7;
+}
+.privacy-list li {
+  margin-bottom: 8px;
+}
+.api-status {
+  margin-top: 14px;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+.api-status.on {
+  background: var(--accent-wash);
+  color: var(--accent);
+}
+.api-status.off {
+  background: rgba(224, 133, 133, 0.1);
+  color: var(--danger);
+}
+.fine-print {
+  margin-top: 16px;
+  color: var(--text-faint);
+  font-size: 11px;
+}
