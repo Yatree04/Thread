@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="stylesheet" href="popup.css" />
+    <title>Thread</title>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="brand">
+        <span class="dot pulse" id="companion-dot"></span>
+        <span class="brand-name">Thread</span>
+      </div>
+      <div class="tabs">
+        <button class="tab-btn active" data-view="threads">Threads</button>
+        <button class="tab-btn" data-view="todos">To-Do</button>
+      </div>
+    </header>
+
+    <div id="companion-warning" class="companion-warning hidden">
+      Companion app isn't running.
+      <code>cd companion &amp;&amp; npm start</code>
+    </div>
+
+    <main id="view-threads" class="view">
+      <input id="search" class="search" type="text" placeholder="Search Threads…" />
+
+      <section>
+        <div class="section-label">Needs Review <span id="review-count" class="count"></span></div>
+        <div id="needs-review-list" class="list"></div>
+      </section>
+
+      <section>
+        <div class="section-label">Active</div>
+        <div id="active-list" class="list"></div>
+      </section>
+
+      <section>
+        <div class="section-label">Dormant</div>
+        <div id="dormant-list" class="list"></div>
+      </section>
+    </main>
+
+    <main id="view-todos" class="view hidden">
+      <div id="calendar-banner" class="calendar-banner hidden">
+        <span>Connect Google Calendar to sync due dates.</span>
+        <button id="connect-calendar-btn">Connect</button>
+      </div>
+
+      <form id="add-todo-form" class="add-todo">
+        <input id="add-todo-input" type="text" placeholder="Add a to-do…" />
+        <button type="submit">Add</button>
+      </form>
+
+      <div id="todos-list" class="list"></div>
+    </main>
+
+    <footer class="footer">
+      <button id="locations-toggle" class="footer-toggle">Watched locations <span class="chev">▾</span></button>
+      <div id="locations-drawer" class="locations-drawer hidden"></div>
+    </footer>
+
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

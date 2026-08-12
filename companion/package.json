@@ -1,0 +1,22 @@
+{
+  "name": "thread-companion",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Local background service for Thread: watches files, classifies them into Threads with Claude, and syncs to-dos to Google Calendar.",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "dev": "node --watch src/index.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "chokidar": "^4.0.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "googleapis": "^144.0.0",
+    "nanoid": "^5.0.9",
+    "open": "^10.1.0"
+  }
+}
