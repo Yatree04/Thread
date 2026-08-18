@@ -1,0 +1,85 @@
+@import "tailwindcss";
+@import "@fontsource/fraunces/400.css";
+@import "@fontsource/fraunces/500-italic.css";
+@import "@fontsource/fraunces/600.css";
+@import "@fontsource/space-grotesk/400.css";
+@import "@fontsource/space-grotesk/500.css";
+@import "@fontsource/space-grotesk/600.css";
+
+@theme {
+  --font-serif: "Fraunces", "Iowan Old Style", ui-serif, Georgia, serif;
+  --font-sans: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  --color-paper: #f6f0e6;
+  --color-paper-raised: #fdfaf3;
+  --color-paper-deep: #ece3d3;
+  --color-ink: #241d15;
+  --color-ink-soft: #5b5245;
+  --color-ink-faint: #8a8072;
+  --color-line: #e2d7c3;
+  --color-accent: #ff7a30;
+  --color-accent-soft: #ffd9bd;
+  --color-accent-deep: #c9591b;
+  --color-amber: #d8a53d;
+  --color-good: #4c8c6b;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-paper);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.font-serif-display {
+  font-family: var(--font-serif);
+}
+
+/* Topographic contour-line texture, layered subtly over the paper tone */
+.trail-texture {
+  background-image:
+    radial-gradient(circle at 15% 20%, rgba(255, 122, 48, 0.05), transparent 40%),
+    radial-gradient(circle at 85% 75%, rgba(76, 140, 107, 0.05), transparent 45%),
+    repeating-radial-gradient(circle at 20% 30%, rgba(36, 29, 21, 0.05) 0, rgba(36, 29, 21, 0.05) 1px, transparent 1px, transparent 34px),
+    repeating-radial-gradient(circle at 80% 70%, rgba(36, 29, 21, 0.045) 0, rgba(36, 29, 21, 0.045) 1px, transparent 1px, transparent 28px),
+    repeating-radial-gradient(circle at 50% 100%, rgba(36, 29, 21, 0.04) 0, rgba(36, 29, 21, 0.04) 1px, transparent 1px, transparent 42px);
+}
+
+.paper-card {
+  background: var(--color-paper-raised);
+  border: 1px solid var(--color-line);
+  box-shadow: 0 1px 2px rgba(36, 29, 21, 0.04), 0 12px 32px -12px rgba(36, 29, 21, 0.18);
+}
+
+::selection {
+  background: var(--color-accent-soft);
+  color: var(--color-ink);
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 8px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.animate-toast-in {
+  animation: toast-in 0.22s ease-out;
+}
