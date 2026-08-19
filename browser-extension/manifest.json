@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "Trails — Tab Watcher",
+  "version": "0.1.0",
+  "description": "Reports your active browser tab to the local Trails desktop app so it can be grouped into a Trail. Sends only the current tab's title and URL to 127.0.0.1 — nothing leaves your machine.",
+  "permissions": ["tabs", "activeTab"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  }
+}
