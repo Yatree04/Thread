@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useTrailStore } from "../store/trailStore";
 import { ConfidenceDot, WaypointIcon } from "./icons";
 import { lifecycleLabel, relativeTime } from "../lib/format";
+import { isElectron } from "../lib/electron";
 import type { Trail } from "../types";
 
 /** Surface 2 — Command Overlay. Answers "Where is the thing I need, right now?" */
@@ -69,7 +70,11 @@ export function CommandOverlay() {
 
   return (
     <div
-      className="fixed inset-0 z-[90] flex items-start justify-center bg-ink/30 pt-[14vh] backdrop-blur-[2px]"
+      className={
+        isElectron
+          ? "fixed inset-0 z-[90] flex items-start justify-center pt-10"
+          : "fixed inset-0 z-[90] flex items-start justify-center bg-ink/30 pt-[14vh] backdrop-blur-[2px]"
+      }
       onClick={(e) => {
         if (e.target === e.currentTarget) close();
       }}
@@ -92,6 +97,13 @@ export function CommandOverlay() {
               placeholder="Search what you were doing…"
               className="flex-1 bg-transparent text-[15px] text-ink placeholder:text-ink-faint focus:outline-none"
             />
+            <button
+              onClick={close}
+              aria-label="Close"
+              className="rounded-full p-1 text-ink-faint hover:bg-paper-deep hover:text-ink"
+            >
+              <X size={16} />
+            </button>
           </div>
 
           <div className="max-h-[360px] overflow-y-auto no-scrollbar py-2">

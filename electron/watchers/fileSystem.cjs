@@ -14,7 +14,7 @@ function shouldIgnore(filePath) {
 /**
  * @param {string[]} folders absolute paths to watch (top-level files only)
  * @param {(file: {title: string, detail: string}) => void} onNewFile
- * @returns {() => void} stop function
+ * @returns {{ stop: () => void, add: (folder: string) => void, remove: (folder: string) => void }}
  */
 function watchFileSystem(folders, onNewFile) {
   const watcher = chokidar.watch(folders, {
@@ -31,7 +31,11 @@ function watchFileSystem(folders, onNewFile) {
 
   watcher.on('error', (err) => console.error('[trails] filesystem watcher error:', err));
 
-  return () => watcher.close();
+  return {
+    stop: () => watcher.close(),
+    add: (folder) => watcher.add(folder),
+    remove: (folder) => watcher.unwatch(folder),
+  };
 }
 
 module.exports = { watchFileSystem };

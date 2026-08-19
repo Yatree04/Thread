@@ -55,8 +55,8 @@ function createWidgetWindow() {
 /** Frameless centered-top overlay used for both Continue Card and Command Overlay. */
 function createOverlayWindow() {
   const { workArea } = screen.getPrimaryDisplay();
-  const width = 460;
-  const height = 560;
+  const width = 600; // fits Command Overlay's 560px-wide card with room to spare
+  const height = 600;
   const win = new BrowserWindow(
     baseOptions({
       width,
@@ -103,4 +103,39 @@ function createSidePanelWindow() {
   return win;
 }
 
-module.exports = { createWidgetWindow, createOverlayWindow, createSidePanelWindow, VITE_DEV_URL };
+/** Small utility window for the API key + watched-folders settings. */
+function createSettingsWindow() {
+  const { workArea } = screen.getPrimaryDisplay();
+  const width = 440;
+  const height = 520;
+  const win = new BrowserWindow(
+    baseOptions({
+      width,
+      height,
+      x: workArea.x + Math.round((workArea.width - width) / 2),
+      y: workArea.y + Math.round((workArea.height - height) / 2),
+      frame: true,
+      title: 'Trails Settings',
+      alwaysOnTop: false,
+      skipTaskbar: false,
+      show: false,
+      backgroundColor: '#f6f0e6',
+      resizable: false,
+    })
+  );
+  win.setMenuBarVisibility(false);
+  loadSurface(win, 'settings');
+  win.on('close', (e) => {
+    e.preventDefault();
+    win.hide();
+  });
+  return win;
+}
+
+module.exports = {
+  createWidgetWindow,
+  createOverlayWindow,
+  createSidePanelWindow,
+  createSettingsWindow,
+  VITE_DEV_URL,
+};

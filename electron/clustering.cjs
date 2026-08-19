@@ -8,8 +8,14 @@ try {
   // dependency not installed yet — classifyItem() below degrades gracefully
 }
 
-const apiKey = process.env.ANTHROPIC_API_KEY;
-const client = Anthropic && apiKey ? new Anthropic({ apiKey }) : null;
+let client = Anthropic && process.env.ANTHROPIC_API_KEY ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY }) : null;
+
+/** Called after the user saves a new key via Settings, so it takes effect immediately — no restart needed. */
+function setApiKey(key) {
+  process.env.ANTHROPIC_API_KEY = key;
+  client = Anthropic && key ? new Anthropic({ apiKey: key }) : null;
+  warnedOnce = false;
+}
 
 let warnedOnce = false;
 
@@ -74,4 +80,4 @@ async function classifyItem({ item, trails, itemsOf }) {
   }
 }
 
-module.exports = { classifyItem, hasApiKey: Boolean(client) };
+module.exports = { classifyItem, setApiKey, hasApiKey: () => Boolean(client) };

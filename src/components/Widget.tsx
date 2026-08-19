@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
-import { ChevronRight, Search, Settings } from "lucide-react";
+import { ChevronRight, Search, Settings, X } from "lucide-react";
 import { useTrailStore } from "../store/trailStore";
 import { WaypointIcon, ConfidenceDot } from "./icons";
 import { confidenceLabel, relativeTime } from "../lib/format";
+import { electronAPI, isElectron } from "../lib/electron";
 
 /**
  * Surface 0 — Widget (companion doc). Glance-only: shows the most relevant
@@ -34,7 +35,7 @@ export function Widget() {
           </div>
           <div className="relative flex items-center gap-1">
             <button
-              onClick={openCommandOverlay}
+              onClick={() => (isElectron ? electronAPI!.requestOpenCommandOverlay() : openCommandOverlay())}
               className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
               aria-label="Search"
               title="Search (⌘K)"
@@ -42,13 +43,23 @@ export function Widget() {
               <Search size={14} />
             </button>
             <button
-              onClick={() => setSettingsOpen((v) => !v)}
+              onClick={() => (isElectron ? electronAPI!.requestOpenSettings() : setSettingsOpen((v) => !v))}
               className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
               aria-label="Settings"
             >
               <Settings size={14} />
             </button>
-            {settingsOpen && (
+            {isElectron && (
+              <button
+                onClick={() => electronAPI!.hideWidget()}
+                className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
+                aria-label="Close widget"
+                title="Hide widget (bring it back from the tray icon)"
+              >
+                <X size={14} />
+              </button>
+            )}
+            {!isElectron && settingsOpen && (
               <div className="absolute right-0 top-8 w-48 rounded-xl border border-line bg-paper-raised p-3 text-xs text-ink-soft shadow-lg">
                 <p className="mb-1 font-medium text-ink">Widget</p>
                 <p>Glance-only — open the Side Panel to edit, archive, or merge Trails.</p>

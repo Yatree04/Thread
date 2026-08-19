@@ -9,6 +9,7 @@ import { SidePanel } from "./components/SidePanel";
 import { ContextMenu } from "./components/ContextMenu";
 import { ToastHost } from "./components/Toast";
 import { DevToolbar } from "./components/DevToolbar";
+import { Settings } from "./components/Settings";
 import { WaypointIcon } from "./components/icons";
 import { getSurface } from "./lib/electron";
 
@@ -17,6 +18,7 @@ export default function App() {
   if (surface === "widget") return <ElectronWidgetWindow />;
   if (surface === "overlay") return <ElectronOverlayWindow />;
   if (surface === "sidepanel") return <ElectronSidePanelWindow />;
+  if (surface === "settings") return <Settings />;
   return <BrowserDemo />;
 }
 
