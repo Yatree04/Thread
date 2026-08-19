@@ -1,7 +1,17 @@
-require('dotenv').config();
-
 const path = require('path');
-const { app, Tray, Menu, nativeImage, ipcMain, globalShortcut, powerMonitor } = require('electron');
+const fs = require('fs');
+const { app, Tray, Menu, nativeImage, ipcMain, globalShortcut, powerMonitor, shell, dialog } = require('electron');
+
+// Dev mode: read .env from the project root (npm run electron:dev).
+// Packaged app: there's no project root to read from, so instead look for
+// <userData>/.env — a per-user file outside the installed app, so an API
+// key never ends up bundled inside a distributable that gets shared around.
+const userEnvPath = path.join(app.getPath('userData'), '.env');
+if (!app.isPackaged) {
+  require('dotenv').config();
+} else if (fs.existsSync(userEnvPath)) {
+  require('dotenv').config({ path: userEnvPath });
+}
 
 const store = require('./store.cjs');
 const { classifyItem, hasApiKey } = require('./clustering.cjs');
@@ -103,9 +113,31 @@ app.whenReady().then(() => {
       { label: 'Search Trails (Ctrl+K)', click: showCommandOverlay },
       { type: 'separator' },
       {
-        label: hasApiKey ? 'AI clustering: connected' : 'AI clustering: no ANTHROPIC_API_KEY set',
+        label: hasApiKey ? 'AI clustering: connected' : 'AI clustering: no API key set',
         enabled: false,
       },
+      ...(hasApiKey
+        ? []
+        : [
+            {
+              label: 'Set Anthropic API Key…',
+              click: () => {
+                if (!fs.existsSync(userEnvPath)) {
+                  fs.mkdirSync(path.dirname(userEnvPath), { recursive: true });
+                  fs.writeFileSync(
+                    userEnvPath,
+                    '# Paste your key from https://console.anthropic.com/settings/keys\n# then restart Trails from the tray menu.\nANTHROPIC_API_KEY=\n'
+                  );
+                }
+                shell.openPath(userEnvPath);
+                dialog.showMessageBox({
+                  type: 'info',
+                  title: 'Trails',
+                  message: 'Paste your Anthropic API key into the file that just opened, save it, then quit and reopen Trails from the tray icon.',
+                });
+              },
+            },
+          ]),
       { type: 'separator' },
       {
         label: 'Quit Trails',

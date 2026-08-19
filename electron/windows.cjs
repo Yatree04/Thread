@@ -1,9 +1,19 @@
 const path = require('path');
-const { BrowserWindow, screen } = require('electron');
+const { app, BrowserWindow, screen } = require('electron');
 
-const VITE_URL = 'http://localhost:5173';
+const VITE_DEV_URL = 'http://localhost:5173';
+const DIST_INDEX = path.join(__dirname, '..', 'dist', 'index.html');
 
 const preload = path.join(__dirname, 'preload.cjs');
+
+/** Dev: loads the Vite dev server. Packaged: loads the built dist/index.html. */
+function loadSurface(win, surface) {
+  if (app.isPackaged) {
+    win.loadFile(DIST_INDEX, { query: { surface } });
+  } else {
+    win.loadURL(`${VITE_DEV_URL}/?surface=${surface}`);
+  }
+}
 
 function baseOptions(extra) {
   return {
@@ -38,7 +48,7 @@ function createWidgetWindow() {
   );
   win.setAlwaysOnTop(true, 'floating');
   win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
-  win.loadURL(`${VITE_URL}/?surface=widget`);
+  loadSurface(win, 'widget');
   return win;
 }
 
@@ -62,7 +72,7 @@ function createOverlayWindow() {
       hasShadow: false,
     })
   );
-  win.loadURL(`${VITE_URL}/?surface=overlay`);
+  loadSurface(win, 'overlay');
   return win;
 }
 
@@ -85,7 +95,7 @@ function createSidePanelWindow() {
     })
   );
   win.setMenuBarVisibility(false);
-  win.loadURL(`${VITE_URL}/?surface=sidepanel`);
+  loadSurface(win, 'sidepanel');
   win.on('close', (e) => {
     e.preventDefault();
     win.hide();
@@ -93,4 +103,4 @@ function createSidePanelWindow() {
   return win;
 }
 
-module.exports = { createWidgetWindow, createOverlayWindow, createSidePanelWindow, VITE_URL };
+module.exports = { createWidgetWindow, createOverlayWindow, createSidePanelWindow, VITE_DEV_URL };
