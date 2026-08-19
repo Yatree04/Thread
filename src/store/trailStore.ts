@@ -3,6 +3,7 @@ import { persist } from "zustand/middleware";
 import type { Confidence, Lifecycle, Trail, TrailItem } from "../types";
 import { seedItems, seedTrails, nextActivityItem } from "../data/seed";
 import { makeId } from "../lib/id";
+import { electronAPI, isElectron } from "../lib/electron";
 
 export type WakeMode = "auto" | "low" | "multiple" | "none";
 export type SidePanelFilter = "all" | "active" | "idle" | "archived";
@@ -89,11 +90,40 @@ interface TrailState {
 
 const ARCHIVE_MEMORY: Record<string, Lifecycle> = {};
 
+/**
+ * In the Electron desktop app, main.cjs's store.cjs is the real single
+ * source of truth (real files/clipboard/tabs feed it, real AI clusters
+ * into it). This mirrors mutating actions into an IPC dispatch and lets
+ * the broadcast-back overwrite `trails`/`items` — everything else (UI-only
+ * state like which filter tab is active) stays local as before.
+ */
+let electronSyncStarted = false;
+export function startElectronSync() {
+  const api = electronAPI;
+  if (!api || electronSyncStarted) return;
+  electronSyncStarted = true;
+  api.onState(({ trails, items, toast }) => {
+    useTrailStore.setState({ trails, items });
+    if (toast) {
+      const undo =
+        toast.undoType && toast.undoTrailId
+          ? () => api.dispatch(toast.undoType!, { trailId: toast.undoTrailId })
+          : undefined;
+      useTrailStore.getState().showToast(toast.message, toast.actionLabel, undo);
+    }
+  });
+  api.onWake(() => useTrailStore.getState().setWakeMode("auto"));
+  api.onOpenCommandOverlay(() => useTrailStore.getState().openCommandOverlay());
+  api.onExpandTrail((trailId) =>
+    useTrailStore.setState({ sidePanelOpen: true, expandedTrailId: trailId })
+  );
+}
+
 export const useTrailStore = create<TrailState>()(
   persist(
     (set, get) => ({
-      trails: seedTrails,
-      items: seedItems,
+      trails: isElectron ? [] : seedTrails,
+      items: isElectron ? [] : seedItems,
       feedbackLog: [],
 
       wakeMode: "auto",
@@ -118,7 +148,10 @@ export const useTrailStore = create<TrailState>()(
       simulateWake: (mode) =>
         set({ wakeMode: mode ?? get().wakeMode, continueCardResolved: false }),
 
-      dismissContinueCard: () => set({ continueCardResolved: true }),
+      dismissContinueCard: () => {
+        set({ continueCardResolved: true });
+        electronAPI?.hideOverlay();
+      },
 
       resumeTrail: (trailId) => {
         const trail = get().trails.find((t) => t.id === trailId);
@@ -133,6 +166,8 @@ export const useTrailStore = create<TrailState>()(
         get().showToast(
           `Reopening ${count} item${count === 1 ? "" : "s"} from "${trail.name}"…`
         );
+        electronAPI?.dispatch("resumeTrail", { trailId });
+        electronAPI?.hideOverlay();
       },
 
       notATrail: (trailId) => {
@@ -154,6 +189,8 @@ export const useTrailStore = create<TrailState>()(
         get().showToast(
           `"${trail.name}" dismissed. Its items are available to sort manually.`
         );
+        electronAPI?.dispatch("notATrail", { trailId });
+        electronAPI?.hideOverlay();
       },
 
       confirmLowConfidence: (trailId) => {
@@ -164,20 +201,26 @@ export const useTrailStore = create<TrailState>()(
           continueCardResolved: true,
         }));
         get().showToast("Confirmed — confidence updated.");
+        electronAPI?.dispatch("confirmLowConfidence", { trailId });
+        electronAPI?.hideOverlay();
       },
 
-      openSidePanel: (trailId) =>
-        set({ sidePanelOpen: true, expandedTrailId: trailId ?? get().expandedTrailId }),
+      openSidePanel: (trailId) => {
+        set({ sidePanelOpen: true, expandedTrailId: trailId ?? get().expandedTrailId });
+        electronAPI?.requestOpenSidePanel(trailId);
+      },
       closeSidePanel: () => set({ sidePanelOpen: false }),
       setSidePanelFilter: (f) => set({ sidePanelFilter: f }),
       setSidePanelSort: (s) => set({ sidePanelSort: s }),
       toggleExpanded: (trailId) =>
         set((s) => ({ expandedTrailId: s.expandedTrailId === trailId ? null : trailId })),
 
-      renameTrail: (trailId, name) =>
+      renameTrail: (trailId, name) => {
         set((s) => ({
           trails: s.trails.map((t) => (t.id === trailId ? { ...t, name } : t)),
-        })),
+        }));
+        electronAPI?.dispatch("renameTrail", { trailId, name });
+      },
 
       archiveTrail: (trailId) => {
         const trail = get().trails.find((t) => t.id === trailId);
@@ -189,6 +232,7 @@ export const useTrailStore = create<TrailState>()(
           ),
         }));
         get().showToast("Trail archived", "Undo", () => get().undoArchive(trailId));
+        electronAPI?.dispatch("archiveTrail", { trailId });
       },
 
       undoArchive: (trailId) => {
@@ -197,6 +241,7 @@ export const useTrailStore = create<TrailState>()(
           trails: s.trails.map((t) => (t.id === trailId ? { ...t, lifecycle: prev } : t)),
         }));
         get().clearToast();
+        electronAPI?.dispatch("undoArchive", { trailId });
       },
 
       startMerge: (sourceId) => set({ pendingMerge: { sourceId } }),
@@ -223,6 +268,7 @@ export const useTrailStore = create<TrailState>()(
           expandedTrailId: target.id,
         }));
         get().showToast(`Merged "${source.name}" into "${target.name}"`);
+        electronAPI?.dispatch("completeMerge", { sourceId: source.id, targetId: target.id });
       },
 
       createTrail: (name, itemIds = []) => {
@@ -244,18 +290,24 @@ export const useTrailStore = create<TrailState>()(
           ),
         }));
         get().showToast(`Created "${name}"`);
+        electronAPI?.dispatch("createTrail", { name, itemIds });
         return id;
       },
 
       openCommandOverlay: () => set({ commandOverlayOpen: true }),
-      closeCommandOverlay: () => set({ commandOverlayOpen: false }),
+      closeCommandOverlay: () => {
+        set({ commandOverlayOpen: false });
+        electronAPI?.hideOverlay();
+      },
 
-      removeMember: (itemId) =>
+      removeMember: (itemId) => {
         set((s) => ({
           items: s.items.map((i) =>
             i.id === itemId ? { ...i, trailId: null, evidence: "Not yet grouped" } : i
           ),
-        })),
+        }));
+        electronAPI?.dispatch("removeMember", { itemId });
+      },
 
       moveMember: (itemId, trailId) => {
         const trail = get().trails.find((t) => t.id === trailId);
@@ -270,6 +322,7 @@ export const useTrailStore = create<TrailState>()(
           ),
         }));
         if (trail) get().showToast(`Added to "${trail.name}"`);
+        electronAPI?.dispatch("moveMember", { itemId, trailId });
       },
 
       openContextMenu: (itemId, x, y) => set({ contextMenu: { itemId, x, y } }),

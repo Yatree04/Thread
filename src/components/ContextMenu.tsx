@@ -55,8 +55,20 @@ export function ContextMenu() {
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt)
     .slice(0, 5);
 
-  const left = Math.min(contextMenu.x, window.innerWidth - 280);
+  const MENU_WIDTH = 240;
+  const SUBMENU_WIDTH = 240;
+  const GAP = 4;
+  const left = Math.min(contextMenu.x, window.innerWidth - MENU_WIDTH - 8);
   const top = Math.min(contextMenu.y, window.innerHeight - 260);
+  // Position the submenu in absolute viewport space (not a CSS left-full/
+  // right-full flip) so it's always fully on-screen — including inside the
+  // desktop app's own ~380px Side Panel window, narrower than menu+submenu.
+  let submenuLeft = left + MENU_WIDTH + GAP;
+  if (submenuLeft + SUBMENU_WIDTH > window.innerWidth - 8) {
+    submenuLeft = left - SUBMENU_WIDTH - GAP;
+  }
+  submenuLeft = Math.max(8, Math.min(submenuLeft, window.innerWidth - SUBMENU_WIDTH - 8));
+  const submenuOffset = submenuLeft - left; // relative to the menu's own left edge
 
   return (
     <>
@@ -94,7 +106,8 @@ export function ContextMenu() {
             {submenuOpen && (
               <div
                 onMouseLeave={() => setSubmenuOpen(false)}
-                className="absolute left-full top-0 ml-1 w-56 rounded-xl border border-line bg-paper-raised py-1.5 shadow-2xl"
+                style={{ left: submenuOffset }}
+                className="absolute top-0 w-56 rounded-xl border border-line bg-paper-raised py-1.5 shadow-2xl"
               >
                 <MenuItem
                   label="Open Trail"
@@ -132,7 +145,8 @@ export function ContextMenu() {
             {submenuOpen && (
               <div
                 onMouseLeave={() => setSubmenuOpen(false)}
-                className="absolute left-full top-0 ml-1 w-60 rounded-xl border border-line bg-paper-raised py-1.5 shadow-2xl"
+                style={{ left: submenuOffset }}
+                className="absolute top-0 w-60 rounded-xl border border-line bg-paper-raised py-1.5 shadow-2xl"
               >
                 {recentTrails.length === 0 && !creatingNew && (
                   <p className="px-3 py-1.5 text-xs text-ink-faint">No Trails yet.</p>

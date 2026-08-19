@@ -13,6 +13,7 @@ import { useTrailStore, type SidePanelFilter } from "../store/trailStore";
 import { ConfidenceDot, MemberTypeIcon, WaypointIcon } from "./icons";
 import { lifecycleLabel, relativeTime } from "../lib/format";
 import { TrailPicker } from "./TrailPicker";
+import { isElectron } from "../lib/electron";
 import type { Trail, TrailItem } from "../types";
 
 const FILTERS: { key: SidePanelFilter; label: string }[] = [
@@ -156,6 +157,7 @@ export function SidePanel() {
       </div>
 
       <div className="flex-1 overflow-y-auto no-scrollbar px-3 py-2">
+        {isElectron && <UnfiledInbox />}
         {trails.filter((t) => !t.rejected).length === 0 ? (
           <EmptyState
             icon
@@ -173,6 +175,46 @@ export function SidePanel() {
           </ul>
         )}
       </div>
+    </div>
+  );
+}
+
+/** Real files/clipboard/tabs the watchers picked up that AI clustering didn't
+ * confidently place anywhere yet. Right-click to file them manually (4.3). */
+function UnfiledInbox() {
+  const allItems = useTrailStore((s) => s.items);
+  const openContextMenu = useTrailStore((s) => s.openContextMenu);
+  const items = useMemo(() => allItems.filter((i) => i.trailId === null), [allItems]);
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-3 rounded-2xl border border-line bg-paper-raised">
+      <div className="flex items-center gap-2 border-b border-line px-3.5 py-2.5">
+        <WaypointIcon variant="outline" size={13} className="text-ink-faint" />
+        <p className="text-xs font-medium uppercase tracking-wide text-ink-faint">
+          Inbox — {items.length} unfiled
+        </p>
+      </div>
+      <ul className="max-h-48 overflow-y-auto no-scrollbar p-1.5">
+        {items.map((item) => (
+          <li key={item.id}>
+            <button
+              onContextMenu={(e) => {
+                e.preventDefault();
+                openContextMenu(item.id, e.clientX, e.clientY);
+              }}
+              onClick={(e) => openContextMenu(item.id, e.clientX, e.clientY)}
+              title="Right-click for options"
+              className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left hover:bg-paper-deep"
+            >
+              <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-paper-deep text-ink-soft">
+                <MemberTypeIcon type={item.type} size={12} />
+              </span>
+              <span className="truncate text-xs text-ink-soft">{item.title}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
