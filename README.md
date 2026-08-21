@@ -50,9 +50,13 @@ npm run electron:dev
 ```
 
 This starts the Vite dev server and the Electron app together. You should see:
-- A **Widget** card appear bottom-left of your screen (always-on-top) — it
-  shows the Trail you were most recently in, a trail switcher, and Revive /
-  Contextualise modes.
+- A **Widget** card appear top-right of your screen (always-on-top) — it's
+  meant to read as a permanently pinned desktop gadget, not a notification, so
+  it stays small and always there. It shows the Trail you were most recently
+  in, a trail switcher, and Revive / Contextualise modes. On first launch it
+  comes pre-loaded with a couple of clearly-labelled **example** Trails
+  ("Example: Pricing Page Redesign", etc.) so there's something to click
+  through immediately — this happens exactly once, never again after that.
 - A **Trails** tray icon appear in your system tray.
 - Nothing else visible — **Capture** and **Query** are their own windows,
   hidden until you open them (see below).
@@ -77,8 +81,14 @@ app can't see your browser's tabs on its own:
 - **Real clipboard**: copy some text. Same pipeline.
 - **Real tabs**: switch tabs in your browser (with the extension loaded).
   Same pipeline.
-- **`Ctrl+K` / `Cmd+K`**, from *anywhere* on your machine, opens **Query** — a
-  real global hotkey, not scoped to a browser tab.
+- **`Win+K`** (`Cmd+K` on macOS), from *anywhere* on your machine, is the
+  *only* way to open **Query** — a real global hotkey, deliberately not
+  duplicated as a button anywhere else, so it stays a "jump to search"
+  gesture rather than one of several redundant ways in. It has its own close
+  (✕) button and closes on `Esc` too. (Windows reserves `Win+K` for its
+  Connect/Cast panel on some versions — if the hotkey doesn't fire, another
+  app or the OS already owns it; Trails logs a warning to the console when
+  that happens.)
 - **Sleep your laptop and wake it up** (or just lock/unlock the screen) — the
   Widget's continuity popup appears for real, driven by Electron's real
   `powerMonitor` wake event, not a button. It shows a real 7-day streak
@@ -87,17 +97,19 @@ app can't see your browser's tabs on its own:
   "Looks right? Yes/No" confirm, or a "Pick up where you left off" chooser
   across a few candidate Trails.
 - Click the **+** on the Widget (or "Quick Capture" from the tray) to open
-  **Capture** — type a note, or attach a real screenshot (`desktopCapturer`),
-  a real local image file, or a link, and it's filed through the same real
-  clustering pipeline as the watchers. If the model isn't confident, you pick
-  the Trail yourself instead of it guessing.
-- Click the **search icon** on the Widget, the tray icon, or `Ctrl+K` to open
-  **Query** — search, "Proactive resurfacing", all Trails (with Active/Idle/
-  Archived filters), recently viewed, and an **Inbox** of anything the
-  watchers picked up that isn't confidently grouped yet — right-click any item
-  there for the real context menu (`Add to a Trail` / `New Trail…` / etc.).
-  Opening a Trail shows its items, a real AI-generated (or honestly-derived,
-  without a key) context summary, and Revive / Archive / Merge / Rename.
+  **Capture**, docked to the right edge of your screen — type a note, or
+  attach a real screenshot (`desktopCapturer`), a real local image file, or a
+  link, and it's filed through the same real clustering pipeline as the
+  watchers. If the model isn't confident, you pick the Trail yourself instead
+  of it guessing. The **–** button minimizes it to a small pull-tab (your
+  draft is kept, nothing is lost) instead of fully closing it.
+- Inside **Query**: search, "Proactive resurfacing", all Trails (with
+  Active/Idle/Archived filters), recently viewed, and an **Inbox** of
+  anything the watchers picked up that isn't confidently grouped yet —
+  right-click any item there for the real context menu (`Add to a Trail` /
+  `New Trail…` / etc.). Opening a Trail shows its items, a real AI-generated
+  (or honestly-derived, without a key) context summary, and Revive / Archive
+  / Merge / Rename.
 - **Quit** from the tray icon's menu when you're done — closing Capture or
   Query just hides that window, since Trails is meant to run in the background.
 
@@ -115,7 +127,7 @@ Being upfront about the boundary, since "desktop app" can mean a lot of things:
 | 7-day streak (Widget continuity popup) | **Real** — computed from actual item timestamps, not scripted |
 | Quick Capture screenshot | **Real** — Electron's `desktopCapturer`, saved to disk |
 | Quick Capture image attach | **Real** — a native file picker (Electron) or the browser's own file picker (browser demo) |
-| Global `Ctrl+K` hotkey | **Real** OS-level hotkey (`globalShortcut`), opens the Query window |
+| Global `Win+K` hotkey | **Real** OS-level hotkey (`globalShortcut`), opens the Query window — its only entry point by design |
 | Sleep/wake → Widget continuity popup | **Real** (`powerMonitor` `resume` / `unlock-screen` events) |
 | System tray app | **Real** |
 | Widget / Capture / Query as real OS windows | **Real** — separate `BrowserWindow`s, not divs in one tab |
@@ -188,13 +200,15 @@ npm run dev
 ```
 
 Open the printed `http://localhost:5173` URL (no `?surface=` param) for the
-original all-in-one demo: the Widget floats bottom-left over a mock desktop of
+original all-in-one demo: the Widget floats top-right over a mock desktop of
 scripted items, and the header's **+ Capture** / **⌘K search** buttons open
 Capture and Query as overlays — the same components, same store, same real
 clustering-shaped logic as the desktop app, just without a real backend to
-call (see the table above). A **"Simulate the OS"** panel stands in for
-things a browser tab can't observe (sleep/wake). `⌘K`/`Ctrl+K` and right-click
-both really work here too. See the inline comments in
+call (see the table above). A browser tab can't register the real OS-level
+`Win+K`, so this demo's header keeps a plain button for it instead — in the
+real desktop app that hotkey is Query's only entry point. A
+**"Simulate the OS"** panel stands in for things a browser tab can't observe
+(sleep/wake). Right-click also really works here. See the inline comments in
 `src/components/DevToolbar.tsx` for what each button simulates. State
 persists to `localStorage`.
 

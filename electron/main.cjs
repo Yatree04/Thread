@@ -119,7 +119,6 @@ function rebuildTrayMenu() {
   const widgetVisible = Boolean(widgetWindow && !widgetWindow.isDestroyed() && widgetWindow.isVisible());
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Search / Browse Trails (Ctrl+K)', click: () => showQuery() },
       { label: 'Quick Capture', click: showCapture },
       {
         label: widgetVisible ? 'Hide Widget' : 'Show Widget',
@@ -130,6 +129,7 @@ function rebuildTrayMenu() {
         },
       },
       { type: 'separator' },
+      { label: 'Search Trails: press Win+K', enabled: false },
       {
         label: clustering.hasApiKey() ? 'AI clustering: connected' : 'AI clustering: no API key set',
         enabled: false,
@@ -275,11 +275,23 @@ app.whenReady().then(() => {
   tray.setToolTip('Trails');
   rebuildTrayMenu();
   tray.on('click', () => {
-    if (queryWindow.isVisible()) queryWindow.hide();
-    else showQuery();
+    if (!widgetWindow || widgetWindow.isDestroyed()) return;
+    widgetWindow.isVisible() ? widgetWindow.hide() : widgetWindow.show();
   });
 
-  globalShortcut.register('CommandOrControl+K', () => showQuery());
+  // Win+K (Cmd+K on macOS, via Electron's "Super" modifier) is the *only*
+  // way Query opens — a deliberate "jump to search" gesture, not a button.
+  // On Windows, Win+K is also a reserved OS shortcut (Connect/Cast) on some
+  // versions — if another app or the OS already owns it, registration fails
+  // silently unless we check, so warn loudly rather than leave it a mystery.
+  const hotkeyOk = globalShortcut.register('Super+K', () => showQuery());
+  if (!hotkeyOk) {
+    console.warn(
+      '\n[trails] Could not register the Win+K global hotkey — Windows or another app already owns it ' +
+        '(Win+K normally opens the "Connect"/Cast panel on Windows 10/11). By design Query has no other ' +
+        'entry point, so free up Win+K (Settings > check for conflicting apps) for it to work.\n'
+    );
+  }
   powerMonitor.on('resume', onWake);
   powerMonitor.on('unlock-screen', onWake);
 

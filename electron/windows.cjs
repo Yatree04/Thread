@@ -27,18 +27,20 @@ function baseOptions(extra) {
   };
 }
 
-/** Small always-on-top glance widget, bottom-left of the primary display — spec's Widget surface.
- * Tall enough to fit the streak/continuity popup above the main card (reference's Widget.tsx). */
+/** Small always-on-top glance widget, pinned top-right of the primary display —
+ * spec's Widget surface. Deliberately compact: this is meant to read as a
+ * permanent desktop gadget (like a pinned sticky note), not a transient
+ * notification, so it stays small and always present rather than fading in/out. */
 function createWidgetWindow() {
   const { workArea } = screen.getPrimaryDisplay();
-  const width = 380;
-  const height = Math.min(640, workArea.height - 48);
+  const width = 300;
+  const height = Math.min(460, workArea.height - 48);
   const win = new BrowserWindow(
     baseOptions({
       width,
       height,
-      x: workArea.x + 24,
-      y: workArea.y + workArea.height - height - 24,
+      x: workArea.x + workArea.width - width - 20,
+      y: workArea.y + 20,
       frame: false,
       transparent: true,
       resizable: false,
@@ -53,18 +55,25 @@ function createWidgetWindow() {
   return win;
 }
 
-/** Frameless popup for the quick-capture composer — type or attach something,
- * real AI clustering files it. Hidden until requested from the Widget or tray. */
+/** Docked to the right edge of the screen for the quick-capture composer —
+ * type or attach something, real AI clustering files it. The window itself
+ * stays a fixed slim strip; the page inside toggles between a collapsed
+ * "peek" tab and the full composer, so it can be minimized without fully
+ * closing (and losing whatever's half-typed). Hidden until requested from
+ * the Widget's + button or the tray. */
 function createCaptureWindow() {
   const { workArea } = screen.getPrimaryDisplay();
-  const width = 420;
-  const height = 620;
+  const width = 360;
+  // Stacks below the pinned Widget (top-right, ~460px tall) on the same right
+  // edge, rather than overlapping it.
+  const top = workArea.y + 20 + 460 + 16;
+  const height = Math.max(360, workArea.height - (top - workArea.y) - 20);
   const win = new BrowserWindow(
     baseOptions({
       width,
       height,
-      x: workArea.x + Math.round((workArea.width - width) / 2),
-      y: workArea.y + 60,
+      x: workArea.x + workArea.width - width - 20,
+      y: top,
       frame: false,
       transparent: true,
       resizable: false,
@@ -84,7 +93,9 @@ function createCaptureWindow() {
 
 /** Frameless centered spotlight-style window for the Query Surface — search,
  * browse all Trails, and drill into one Trail's detail view (absorbs the old
- * Command Overlay + Side Panel). Hidden until requested via Ctrl+K/tray/widget. */
+ * Command Overlay + Side Panel). By design, the *only* way to open it is the
+ * real global Win+K hotkey — no tray or Widget entry point — so it stays a
+ * deliberate "jump to search" gesture rather than another button to click. */
 function createQueryWindow() {
   const { workArea } = screen.getPrimaryDisplay();
   const width = 600;

@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, Search, Settings, X } from "lucide-react";
+import { ChevronDown, Settings, X } from "lucide-react";
 import { useTrailStore } from "../store/trailStore";
 import { getContinueCardData } from "../store/selectors";
 import { ConfidenceDot, MemberTypeIcon, WaypointIcon } from "./icons";
-import { confidenceLabel, relativeTime } from "../lib/format";
+import { relativeTime } from "../lib/format";
 import { computeStreak, describeStreak } from "../lib/streak";
 import { electronAPI, isElectron } from "../lib/electron";
 import type { Trail } from "../types";
@@ -64,6 +64,9 @@ export function Widget() {
   const memberCount = currentTrail ? itemsOf(currentTrail.id).length : 0;
   const streak = currentTrail ? computeStreak(allItems, currentTrail.id) : [];
 
+  // Query has exactly one entry point by design — the real Win+K global
+  // hotkey — so "See all Trails" below is the only in-app link to it, kept
+  // as a contextual deep-link rather than a redundant "open search" button.
   const goQuery = (trailId?: string) => (isElectron ? electronAPI!.requestOpenQuery(trailId) : openQuery(trailId));
 
   const handleRevive = () => {
@@ -74,45 +77,37 @@ export function Widget() {
   };
 
   return (
-    <div className="flex h-full flex-col items-center gap-3 p-3">
+    <div className="flex h-full flex-col items-center gap-2 p-2.5">
       <div className="flex w-full items-center justify-between px-1">
-        <div className="flex items-center gap-2 text-ink-soft">
-          <WaypointIcon size={15} />
-          <span className="text-xs font-medium tracking-wide uppercase">Trails</span>
+        <div className="flex items-center gap-1.5 text-ink-soft">
+          <WaypointIcon size={13} />
+          <span className="text-[11px] font-medium tracking-wide uppercase">Trails</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5">
           <button
             onClick={() => (isElectron ? electronAPI!.requestOpenCapture() : openCapture())}
-            className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
+            className="rounded-full p-1 text-ink-faint hover:bg-paper-deep hover:text-ink"
             aria-label="Quick capture"
             title="Quick capture"
           >
-            <span className="block text-[15px] leading-none">+</span>
-          </button>
-          <button
-            onClick={() => goQuery()}
-            className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
-            aria-label="Search"
-            title="Search / browse (Ctrl+K)"
-          >
-            <Search size={14} />
+            <span className="block text-[14px] leading-none">+</span>
           </button>
           <button
             onClick={() => (isElectron ? electronAPI!.requestOpenSettings() : undefined)}
-            className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
+            className="rounded-full p-1 text-ink-faint hover:bg-paper-deep hover:text-ink"
             aria-label="Settings"
             title="Settings"
           >
-            <Settings size={14} />
+            <Settings size={13} />
           </button>
           {isElectron && (
             <button
               onClick={() => electronAPI!.hideWidget()}
-              className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
+              className="rounded-full p-1 text-ink-faint hover:bg-paper-deep hover:text-ink"
               aria-label="Close widget"
               title="Hide widget (bring it back from the tray icon)"
             >
-              <X size={14} />
+              <X size={13} />
             </button>
           )}
         </div>
@@ -128,18 +123,17 @@ export function Widget() {
       ) : (
         <>
           {showPopup && (
-            <div className="paper-card trail-texture relative w-full rounded-3xl px-6 pt-8 pb-4">
-              <div className="absolute left-1/2 -top-4 h-8 w-8 -translate-x-1/2 rounded-full border-2 border-paper-raised bg-paper-deep shadow-sm" />
-              <p className="mb-3 text-center text-[13px] leading-snug text-ink-soft">
-                <span className="font-semibold text-ink">"{currentTrail.name}"</span>
-                <br />
-                has been active {describeStreak(streak)}
+            <div className="paper-card trail-texture relative w-full rounded-2xl px-4 pt-6 pb-3">
+              <div className="absolute left-1/2 -top-3 h-6 w-6 -translate-x-1/2 rounded-full border-2 border-paper-raised bg-paper-deep shadow-sm" />
+              <p className="mb-2 text-center text-[12px] leading-snug text-ink-soft">
+                <span className="font-semibold text-ink">"{currentTrail.name}"</span> has been active{" "}
+                {describeStreak(streak)}
               </p>
-              <div className="mb-3 flex items-center justify-between">
+              <div className="mb-2 flex items-center justify-between">
                 {streak.map((day, i) => (
                   <div
                     key={i}
-                    className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-medium ${
+                    className={`flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-medium ${
                       day.active ? "bg-accent-soft text-accent-deep" : "border border-line text-ink-faint"
                     }`}
                   >
@@ -149,17 +143,17 @@ export function Widget() {
               </div>
               {isLow ? (
                 <div>
-                  <p className="mb-1.5 text-center text-xs font-medium text-ink">Looks right?</p>
-                  <div className="flex gap-2">
+                  <p className="mb-1 text-center text-[11px] font-medium text-ink">Looks right?</p>
+                  <div className="flex gap-1.5">
                     <button
                       onClick={() => confirmLowConfidence(currentTrail.id)}
-                      className="flex-1 rounded-2xl bg-ink py-2 text-xs font-semibold text-paper hover:bg-ink/90"
+                      className="flex-1 rounded-xl bg-ink py-1.5 text-[11px] font-semibold text-paper hover:bg-ink/90"
                     >
                       Yes
                     </button>
                     <button
                       onClick={() => notATrail(currentTrail.id)}
-                      className="flex-1 rounded-2xl border border-line py-2 text-xs font-semibold text-ink-soft hover:bg-paper-deep"
+                      className="flex-1 rounded-xl border border-line py-1.5 text-[11px] font-semibold text-ink-soft hover:bg-paper-deep"
                     >
                       No
                     </button>
@@ -168,37 +162,34 @@ export function Widget() {
               ) : (
                 <button
                   onClick={() => setMode("contextualise")}
-                  className="w-full rounded-2xl bg-accent-soft py-2.5 text-[12px] font-semibold text-accent-deep hover:brightness-95"
+                  className="w-full rounded-xl bg-accent-soft py-1.5 text-[11px] font-semibold text-accent-deep hover:brightness-95"
                 >
                   View context
                 </button>
               )}
               <button
                 onClick={() => setPopupCollapsed(true)}
-                className="absolute bottom-2.5 right-4 text-ink-faint hover:text-ink"
+                className="absolute bottom-1.5 right-3 text-ink-faint hover:text-ink"
                 aria-label="Collapse"
               >
-                <ChevronDown size={13} />
+                <ChevronDown size={12} />
               </button>
             </div>
           )}
 
-          <div className="paper-card trail-texture w-full flex-1 overflow-y-auto no-scrollbar rounded-3xl">
-            <div className="px-4 pt-4 pb-2.5">
-              <h2 className="font-serif-display text-lg leading-tight text-ink">Where you left off…</h2>
-              <p className="mt-0.5 text-[11px] text-ink-faint">
-                Trail since {new Date(currentTrail.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })} · auto-logged today
-              </p>
+          <div className="paper-card trail-texture w-full flex-1 overflow-y-auto no-scrollbar rounded-2xl">
+            <div className="px-3.5 pt-3 pb-2">
+              <h2 className="font-serif-display text-[15px] leading-tight text-ink">Where you left off…</h2>
             </div>
 
-            <div className="px-4 pb-2.5">
+            <div className="px-3.5 pb-2">
               <button
                 onClick={() => setShowTrailPicker((v) => !v)}
-                className="flex w-full items-center gap-2 rounded-2xl border border-line bg-paper-deep/50 px-3 py-2 text-left"
+                className="flex w-full items-center gap-2 rounded-xl border border-line bg-paper-deep/50 px-2.5 py-1.5 text-left"
               >
-                <ConfidenceDot confidence={currentTrail.confidence} size={7} />
-                <span className="flex-1 truncate text-xs font-medium text-ink">{currentTrail.name}</span>
-                <ChevronDown size={13} className={`text-ink-faint transition-transform ${showTrailPicker ? "rotate-180" : ""}`} />
+                <ConfidenceDot confidence={currentTrail.confidence} size={6} />
+                <span className="flex-1 truncate text-[11px] font-medium text-ink">{currentTrail.name}</span>
+                <ChevronDown size={12} className={`text-ink-faint transition-transform ${showTrailPicker ? "rotate-180" : ""}`} />
               </button>
               {showTrailPicker && (
                 <div className="mt-1.5 max-h-40 overflow-y-auto no-scrollbar rounded-2xl border border-line bg-paper-raised">
@@ -224,15 +215,15 @@ export function Widget() {
             </div>
 
             {mode === "revive" ? (
-              <div className="relative px-4 pb-3">
-                <div className="flex gap-2 overflow-x-auto pr-8 no-scrollbar">
+              <div className="relative px-3.5 pb-2">
+                <div className="flex gap-1.5 overflow-x-auto pr-6 no-scrollbar">
                   {itemsOf(currentTrail.id).map((item) => (
                     <div
                       key={item.id}
-                      className="flex shrink-0 items-center gap-1.5 rounded-2xl border border-line bg-paper-deep/50 px-3 py-1.5"
+                      className="flex shrink-0 items-center gap-1 rounded-xl border border-line bg-paper-deep/50 px-2 py-1"
                     >
-                      <MemberTypeIcon type={item.type} size={11} className="text-ink-faint" />
-                      <span className="whitespace-nowrap text-[11px] font-medium text-ink-soft">{item.title}</span>
+                      <MemberTypeIcon type={item.type} size={10} className="text-ink-faint" />
+                      <span className="whitespace-nowrap text-[10px] font-medium text-ink-soft">{item.title}</span>
                     </div>
                   ))}
                 </div>
@@ -241,32 +232,30 @@ export function Widget() {
               <ContextualiseBody trail={currentTrail} focusedIdx={focusedIdx} onFocus={setFocusedIdx} />
             )}
 
-            <div className="flex items-center gap-3 px-4 pb-3 text-[10px] text-ink-faint">
+            <div className="flex items-center gap-2 px-3.5 pb-2 text-[10px] text-ink-faint">
               <span>
                 <span className="font-mono text-ink-soft">{memberCount}</span> items
               </span>
               <span>·</span>
-              <span>since {new Date(currentTrail.createdAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-              <span>·</span>
               <span className="flex items-center gap-1">
                 <ConfidenceDot confidence={currentTrail.confidence} size={6} />
-                {confidenceLabel(currentTrail.confidence)}
+                {currentTrail.confidence}%
               </span>
             </div>
 
-            <div className="px-3 pb-3">
-              <div className="flex rounded-2xl bg-paper-deep/60 p-1">
+            <div className="px-2.5 pb-2">
+              <div className="flex rounded-xl bg-paper-deep/60 p-1">
                 <button
                   onClick={handleRevive}
-                  className={`flex-1 rounded-xl py-2 text-[12px] font-medium transition-all ${
+                  className={`flex-1 rounded-lg py-1.5 text-[11px] font-medium transition-all ${
                     mode === "revive" ? "bg-ink text-paper shadow" : "text-ink-faint"
                   }`}
                 >
-                  {revived ? "Reviving…" : "Revive workspace"}
+                  {revived ? "Reviving…" : "Revive"}
                 </button>
                 <button
                   onClick={() => setMode("contextualise")}
-                  className={`flex-1 rounded-xl py-2 text-[12px] font-medium transition-all ${
+                  className={`flex-1 rounded-lg py-1.5 text-[11px] font-medium transition-all ${
                     mode === "contextualise" ? "bg-ink text-paper shadow" : "text-ink-faint"
                   }`}
                 >
@@ -275,7 +264,7 @@ export function Widget() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between px-4 pb-3 text-[11px]">
+            <div className="flex items-center justify-between px-3.5 pb-2.5 text-[10px]">
               <button onClick={() => goQuery()} className="text-ink-soft hover:text-ink hover:underline">
                 See all Trails
               </button>

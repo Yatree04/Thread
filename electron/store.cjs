@@ -3,15 +3,27 @@
 // that dispatches actions here and receives the authoritative state back.
 const crypto = require('crypto');
 const Store = require('electron-store');
+const demoSeed = require('./demoSeed.cjs');
 
 const disk = new Store({
   name: 'trails-data',
-  defaults: { trails: [], items: [] },
+  defaults: { trails: [], items: [], seeded: false },
 });
 
 let trails = disk.get('trails');
 let items = disk.get('items');
 const archiveMemory = {};
+
+// One-time example content so there's something to explore on first launch —
+// never re-seeded after this, even if you later clear everything out.
+if (!disk.get('seeded')) {
+  const demo = demoSeed.build();
+  trails = demo.trails;
+  items = demo.items;
+  disk.set('seeded', true);
+  disk.set('trails', trails);
+  disk.set('items', items);
+}
 
 function persist() {
   disk.set('trails', trails);

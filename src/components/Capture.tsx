@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { Camera, Check, Image as ImageIcon, Link as LinkIcon, Send, X } from "lucide-react";
+import { Camera, Check, Image as ImageIcon, Link as LinkIcon, Minus, Send, X } from "lucide-react";
 import { useTrailStore } from "../store/trailStore";
 import { MemberTypeIcon, WaypointIcon } from "./icons";
 import { TrailPicker } from "./TrailPicker";
@@ -32,6 +32,7 @@ export function Capture() {
   const moveMember = useTrailStore((s) => s.moveMember);
   const createTrail = useTrailStore((s) => s.createTrail);
 
+  const [minimized, setMinimized] = useState(false);
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -91,6 +92,27 @@ export function Capture() {
     setAttachment(null);
   }
 
+  // Minimized state: a small pull-tab docked at the top of the window, so
+  // Capture can be tucked out of the way without losing whatever's half-typed
+  // (draft text/attachment stay in state) and without fully closing it.
+  if (minimized) {
+    const preview = text.trim() || attachment?.label;
+    return (
+      <div className="flex h-full items-start justify-end p-3">
+        <button
+          onClick={() => setMinimized(false)}
+          className="paper-card trail-texture flex max-w-[220px] items-center gap-2 rounded-full px-3 py-2 shadow-lg hover:brightness-95"
+        >
+          <WaypointIcon size={13} />
+          <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-ink">
+            {preview || "Quick Capture"}
+          </span>
+          {preview && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="flex h-full flex-col p-3">
       <div className="mb-2 flex items-center justify-between px-1">
@@ -98,15 +120,25 @@ export function Capture() {
           <WaypointIcon size={15} />
           <span className="text-xs font-medium tracking-wide uppercase">Quick Capture</span>
         </div>
-        {isElectron && (
+        <div className="flex items-center gap-0.5">
           <button
-            onClick={() => electronAPI!.hideCapture()}
+            onClick={() => setMinimized(true)}
             className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
-            aria-label="Close"
+            aria-label="Minimize"
+            title="Minimize (keeps your draft)"
           >
-            <X size={14} />
+            <Minus size={14} />
           </button>
-        )}
+          {isElectron && (
+            <button
+              onClick={() => electronAPI!.hideCapture()}
+              className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
+              aria-label="Close"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="paper-card trail-texture flex flex-1 flex-col overflow-hidden rounded-3xl">
