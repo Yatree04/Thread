@@ -9,14 +9,20 @@ export function relativeTime(timestamp: number, from: number = Date.now()): stri
   return `${day}d ago`;
 }
 
-export function confidenceLabel(confidence: "high" | "medium" | "low"): string {
-  switch (confidence) {
+export function confidenceBucket(score: number): "high" | "medium" | "low" {
+  if (score >= 85) return "high";
+  if (score >= 65) return "medium";
+  return "low";
+}
+
+export function confidenceLabel(score: number): string {
+  switch (confidenceBucket(score)) {
     case "high":
-      return "High confidence";
+      return `${score}% confidence`;
     case "medium":
-      return "Medium confidence";
+      return `${score}% confidence`;
     case "low":
-      return "Low confidence — tap to confirm";
+      return `${score}% confidence — tap to confirm`;
   }
 }
 

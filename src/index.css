@@ -37,6 +37,14 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/* Electron surface windows (Widget/Capture/Query/Settings) use real OS
+ * window transparency — let the desktop show through instead of painting
+ * the browser demo's opaque paper background over the whole window. */
+html.electron-surface,
+html.electron-surface body {
+  background-color: transparent;
+}
+
 .font-serif-display {
   font-family: var(--font-serif);
 }

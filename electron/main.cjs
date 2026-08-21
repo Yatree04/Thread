@@ -1,6 +1,16 @@
 const path = require('path');
 const fs = require('fs');
-const { app, Tray, Menu, nativeImage, ipcMain, globalShortcut, powerMonitor, dialog } = require('electron');
+const {
+  app,
+  Tray,
+  Menu,
+  nativeImage,
+  ipcMain,
+  globalShortcut,
+  powerMonitor,
+  dialog,
+  desktopCapturer,
+} = require('electron');
 
 const settings = require('./settings.cjs');
 
@@ -21,14 +31,14 @@ const { watchClipboard } = require('./watchers/clipboard.cjs');
 const { startBridgeServer } = require('./server.cjs');
 const {
   createWidgetWindow,
-  createOverlayWindow,
-  createSidePanelWindow,
+  createCaptureWindow,
+  createQueryWindow,
   createSettingsWindow,
 } = require('./windows.cjs');
 
 let widgetWindow = null;
-let overlayWindow = null;
-let sidePanelWindow = null;
+let captureWindow = null;
+let queryWindow = null;
 let settingsWindow = null;
 let tray = null;
 let isQuitting = false;
@@ -38,19 +48,19 @@ const stopFns = [];
 function broadcastState(toast) {
   const state = store.getState();
   const payload = toast ? { ...state, toast } : state;
-  [widgetWindow, overlayWindow, sidePanelWindow].forEach((w) => {
+  [widgetWindow, captureWindow, queryWindow].forEach((w) => {
     if (w && !w.isDestroyed()) w.webContents.send('state', payload);
   });
 }
 
-function ensureSidePanel() {
-  if (!sidePanelWindow || sidePanelWindow.isDestroyed()) {
-    sidePanelWindow = createSidePanelWindow();
-    sidePanelWindow.webContents.on('did-finish-load', () => {
-      sidePanelWindow.webContents.send('state', store.getState());
+function ensureCaptureWindow() {
+  if (!captureWindow || captureWindow.isDestroyed()) {
+    captureWindow = createCaptureWindow();
+    captureWindow.webContents.on('did-finish-load', () => {
+      captureWindow.webContents.send('state', store.getState());
     });
   }
-  return sidePanelWindow;
+  return captureWindow;
 }
 
 function ensureSettingsWindow() {
@@ -60,29 +70,45 @@ function ensureSettingsWindow() {
   return settingsWindow;
 }
 
-function showCommandOverlay() {
-  if (!overlayWindow || overlayWindow.isDestroyed()) return;
-  overlayWindow.webContents.send('open-command-overlay');
-  overlayWindow.show();
-  overlayWindow.focus();
+function showCapture() {
+  const win = ensureCaptureWindow();
+  win.show();
+  win.focus();
 }
 
+/** The Query Surface — search, browse all Trails, and drill into detail.
+ * Absorbs the old Command Overlay (search) and Side Panel (browse/manage). */
+function showQuery(trailId) {
+  if (!queryWindow || queryWindow.isDestroyed()) return;
+  queryWindow.webContents.send('open-query');
+  if (trailId) queryWindow.webContents.send('expand-trail', trailId);
+  queryWindow.show();
+  queryWindow.focus();
+}
+
+/** Real sleep/unlock wake (spec 1.x) — resurfaces via the Widget's continuity popup. */
 function onWake() {
-  if (!overlayWindow || overlayWindow.isDestroyed()) return;
-  overlayWindow.webContents.send('wake');
-  overlayWindow.show();
+  if (!widgetWindow || widgetWindow.isDestroyed()) return;
+  widgetWindow.webContents.send('wake');
+  widgetWindow.show();
+  widgetWindow.focus();
+}
+
+async function classifyAndFile(type, title, detail) {
+  const state = store.getState();
+  const decision = await clustering.classifyItem({
+    item: { type, title, detail },
+    trails: state.trails,
+    itemsOf: store.itemsOf,
+  });
+  const result = store.ingestItem({ type, title, detail, decision });
+  broadcastState({ message: result.message });
+  return { decision, itemId: result.itemId, trailId: result.trailId };
 }
 
 async function handleDetectedItem(type, raw) {
   try {
-    const state = store.getState();
-    const decision = await clustering.classifyItem({
-      item: { type, title: raw.title, detail: raw.detail },
-      trails: state.trails,
-      itemsOf: store.itemsOf,
-    });
-    const toast = store.ingestItem({ type, title: raw.title, detail: raw.detail, decision });
-    broadcastState(toast);
+    await classifyAndFile(type, raw.title, raw.detail);
   } catch (err) {
     console.error('[trails] failed to handle detected item:', err);
   }
@@ -93,15 +119,8 @@ function rebuildTrayMenu() {
   const widgetVisible = Boolean(widgetWindow && !widgetWindow.isDestroyed() && widgetWindow.isVisible());
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      {
-        label: 'Open Side Panel',
-        click: () => {
-          const win = ensureSidePanel();
-          win.show();
-          win.focus();
-        },
-      },
-      { label: 'Search Trails (Ctrl+K)', click: showCommandOverlay },
+      { label: 'Search / Browse Trails (Ctrl+K)', click: () => showQuery() },
+      { label: 'Quick Capture', click: showCapture },
       {
         label: widgetVisible ? 'Hide Widget' : 'Show Widget',
         click: () => {
@@ -129,8 +148,8 @@ function rebuildTrayMenu() {
         click: () => {
           isQuitting = true;
           if (settingsWindow) settingsWindow.destroy();
-          if (sidePanelWindow) sidePanelWindow.destroy();
-          if (overlayWindow) overlayWindow.destroy();
+          if (queryWindow) queryWindow.destroy();
+          if (captureWindow) captureWindow.destroy();
           if (widgetWindow) widgetWindow.destroy();
           app.quit();
         },
@@ -141,10 +160,10 @@ function rebuildTrayMenu() {
 
 app.whenReady().then(() => {
   widgetWindow = createWidgetWindow();
-  overlayWindow = createOverlayWindow();
+  queryWindow = createQueryWindow();
 
   widgetWindow.webContents.on('did-finish-load', () => widgetWindow.webContents.send('state', store.getState()));
-  overlayWindow.webContents.on('did-finish-load', () => overlayWindow.webContents.send('state', store.getState()));
+  queryWindow.webContents.on('did-finish-load', () => queryWindow.webContents.send('state', store.getState()));
   widgetWindow.on('show', rebuildTrayMenu);
   widgetWindow.on('hide', rebuildTrayMenu);
 
@@ -153,27 +172,70 @@ app.whenReady().then(() => {
     broadcastState(toast);
   });
 
-  ipcMain.on('hide-overlay', () => {
-    if (overlayWindow && !overlayWindow.isDestroyed()) overlayWindow.hide();
+  ipcMain.on('hide-capture', () => {
+    if (captureWindow && !captureWindow.isDestroyed()) captureWindow.hide();
+  });
+
+  ipcMain.on('hide-query', () => {
+    if (queryWindow && !queryWindow.isDestroyed()) queryWindow.hide();
   });
 
   ipcMain.on('hide-widget', () => {
     if (widgetWindow && !widgetWindow.isDestroyed()) widgetWindow.hide();
   });
 
-  ipcMain.on('request-open-command-overlay', showCommandOverlay);
+  ipcMain.on('request-open-capture', showCapture);
 
-  ipcMain.on('request-open-side-panel', (_e, { trailId } = {}) => {
-    const win = ensureSidePanel();
-    win.show();
-    win.focus();
-    if (trailId) win.webContents.send('expand-trail', trailId);
-  });
+  ipcMain.on('request-open-query', (_e, { trailId } = {}) => showQuery(trailId));
 
   ipcMain.on('request-open-settings', () => {
     const win = ensureSettingsWindow();
     win.show();
     win.focus();
+  });
+
+  ipcMain.handle('submit-capture', async (_e, { text, attachmentType, attachmentTitle, attachmentDetail }) => {
+    const type = attachmentType || 'clipboard';
+    const trimmed = (text || '').trim();
+    const title = attachmentTitle || (trimmed.length > 60 ? `${trimmed.slice(0, 57)}...` : trimmed) || 'Quick capture';
+    const detail = attachmentType ? text : attachmentDetail;
+    return classifyAndFile(type, title, detail);
+  });
+
+  ipcMain.handle('capture-screenshot', async () => {
+    const sources = await desktopCapturer.getSources({
+      types: ['screen'],
+      thumbnailSize: { width: 1600, height: 1000 },
+    });
+    const primary = sources[0];
+    if (!primary || primary.thumbnail.isEmpty()) return null;
+    const dir = path.join(app.getPath('userData'), 'captures');
+    fs.mkdirSync(dir, { recursive: true });
+    const filePath = path.join(dir, `screenshot-${Date.now()}.png`);
+    fs.writeFileSync(filePath, primary.thumbnail.toPNG());
+    return { path: filePath, dataUrl: primary.thumbnail.toDataURL() };
+  });
+
+  ipcMain.handle('pick-image-file', async () => {
+    const win = captureWindow || undefined;
+    const res = await dialog.showOpenDialog(win, {
+      properties: ['openFile'],
+      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'gif', 'webp'] }],
+    });
+    return res.canceled ? null : res.filePaths[0];
+  });
+
+  ipcMain.handle('get-context-summary', async (_e, { trailId, itemId }) => {
+    const trail = store.getTrail(trailId);
+    if (!trail) return { text: '', at: 0 };
+    const key = itemId || 'all';
+    const cached = store.getCachedContext(trailId, key);
+    if (cached && cached.at >= trail.lastActiveAt) return cached;
+    const items = store.itemsOf(trailId);
+    const focusItem = itemId ? items.find((i) => i.id === itemId) : null;
+    const text = await clustering.summarizeContext({ trail, items, focusItem });
+    store.setCachedContext(trailId, key, text);
+    return { text, at: Date.now() };
   });
 
   ipcMain.handle('get-settings', () => ({
@@ -213,15 +275,11 @@ app.whenReady().then(() => {
   tray.setToolTip('Trails');
   rebuildTrayMenu();
   tray.on('click', () => {
-    const win = ensureSidePanel();
-    if (win.isVisible()) win.hide();
-    else {
-      win.show();
-      win.focus();
-    }
+    if (queryWindow.isVisible()) queryWindow.hide();
+    else showQuery();
   });
 
-  globalShortcut.register('CommandOrControl+K', showCommandOverlay);
+  globalShortcut.register('CommandOrControl+K', () => showQuery());
   powerMonitor.on('resume', onWake);
   powerMonitor.on('unlock-screen', onWake);
 
@@ -242,7 +300,7 @@ app.whenReady().then(() => {
 });
 
 app.on('window-all-closed', () => {
-  // Trails is a background app — closing a window (e.g. the Side Panel) never quits it.
+  // Trails is a background app — closing a window (e.g. the Query Surface) never quits it.
 });
 
 app.on('before-quit', () => {

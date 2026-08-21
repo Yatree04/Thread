@@ -9,7 +9,7 @@ export const seedTrails: Trail[] = [
   {
     id: "trail-pricing",
     name: "Pricing Page Redesign",
-    confidence: "high",
+    confidence: 94,
     lifecycle: "active",
     createdAt: now - 3 * DAY,
     lastActiveAt: now - 5 * MIN,
@@ -17,7 +17,7 @@ export const seedTrails: Trail[] = [
   {
     id: "trail-onboarding",
     name: "Client Onboarding — Lumen Co.",
-    confidence: "medium",
+    confidence: 78,
     lifecycle: "active",
     createdAt: now - 5 * DAY,
     lastActiveAt: now - 3 * HOUR,
@@ -25,7 +25,7 @@ export const seedTrails: Trail[] = [
   {
     id: "trail-deck",
     name: "Q3 Investor Deck",
-    confidence: "medium",
+    confidence: 72,
     lifecycle: "forming",
     createdAt: now - 1 * DAY,
     lastActiveAt: now - 6 * HOUR,
@@ -33,7 +33,7 @@ export const seedTrails: Trail[] = [
   {
     id: "trail-auth",
     name: "Backend Auth Refactor",
-    confidence: "high",
+    confidence: 90,
     lifecycle: "idle",
     createdAt: now - 9 * DAY,
     lastActiveAt: now - 2 * DAY,
@@ -41,7 +41,7 @@ export const seedTrails: Trail[] = [
   {
     id: "trail-abtest",
     name: "Old Landing Page A/B Test",
-    confidence: "high",
+    confidence: 88,
     lifecycle: "archived",
     createdAt: now - 40 * DAY,
     lastActiveAt: now - 21 * DAY,
@@ -49,7 +49,7 @@ export const seedTrails: Trail[] = [
   {
     id: "trail-vendor",
     name: "Maybe: Vendor Research",
-    confidence: "low",
+    confidence: 40,
     lifecycle: "forming",
     createdAt: now - 90 * MIN,
     lastActiveAt: now - 75 * MIN,

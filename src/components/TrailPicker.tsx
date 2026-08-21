@@ -3,56 +3,79 @@ import type { Trail } from "../types";
 import { ConfidenceDot, WaypointIcon } from "./icons";
 import { lifecycleLabel } from "../lib/format";
 
+const DARK = {
+  bg: "#1e1e25",
+  bgHover: "#26262f",
+  border: "#2c2c36",
+  text: "#f2f2f5",
+  faint: "#8b8b97",
+  accent: "#7dd3fc",
+};
+
 export function TrailPicker({
   title,
   trails,
   onPick,
   onCreateNew,
   onClose,
+  dark = false,
 }: {
   title: string;
   trails: Trail[];
   onPick: (trailId: string) => void;
   onCreateNew?: (name: string) => void;
   onClose: () => void;
+  dark?: boolean;
 }) {
   const [creating, setCreating] = useState(false);
   const [name, setName] = useState("");
 
   return (
     <div
-      className="fixed inset-0 z-[95] flex items-center justify-center bg-ink/30"
+      className="fixed inset-0 z-[95] flex items-center justify-center"
+      style={{ background: dark ? "rgba(0,0,0,0.5)" : undefined }}
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="paper-card w-[340px] rounded-2xl p-4">
-        <div className="mb-3 flex items-center gap-2 text-ink-soft">
-          <WaypointIcon size={14} />
+      <div
+        className={`w-[340px] rounded-2xl p-4 ${dark ? "" : "paper-card"}`}
+        style={dark ? { background: DARK.bg, border: `1px solid ${DARK.border}`, color: DARK.text } : undefined}
+      >
+        <div className="mb-3 flex items-center gap-2" style={dark ? { color: DARK.faint } : undefined}>
+          <WaypointIcon size={14} className={dark ? "" : "text-ink-soft"} />
           <p className="text-xs font-medium uppercase tracking-wide">{title}</p>
         </div>
 
         <div className="max-h-64 space-y-1 overflow-y-auto no-scrollbar">
           {trails.length === 0 && !onCreateNew && (
-            <p className="py-3 text-center text-sm text-ink-faint">No other Trails yet.</p>
+            <p className="py-3 text-center text-sm" style={dark ? { color: DARK.faint } : undefined}>
+              No other Trails yet.
+            </p>
           )}
           {trails.map((t) => (
             <button
               key={t.id}
               onClick={() => onPick(t.id)}
-              className="flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left hover:bg-paper-deep"
+              onMouseEnter={(e) => dark && (e.currentTarget.style.background = DARK.bgHover)}
+              onMouseLeave={(e) => dark && (e.currentTarget.style.background = "transparent")}
+              className={`flex w-full items-center gap-2.5 rounded-xl px-2.5 py-2 text-left ${dark ? "" : "hover:bg-paper-deep"}`}
             >
               <ConfidenceDot confidence={t.confidence} size={7} />
               <div className="min-w-0">
-                <p className="truncate text-sm text-ink">{t.name}</p>
-                <p className="text-xs text-ink-faint">{lifecycleLabel(t.lifecycle)}</p>
+                <p className="truncate text-sm" style={dark ? { color: DARK.text } : { color: "var(--color-ink)" }}>
+                  {t.name}
+                </p>
+                <p className="text-xs" style={dark ? { color: DARK.faint } : undefined}>
+                  {lifecycleLabel(t.lifecycle)}
+                </p>
               </div>
             </button>
           ))}
         </div>
 
         {onCreateNew && (
-          <div className="mt-2 border-t border-line pt-2">
+          <div className="mt-2 border-t pt-2" style={dark ? { borderColor: DARK.border } : undefined}>
             {creating ? (
               <form
                 onSubmit={(e) => {
@@ -66,11 +89,15 @@ export function TrailPicker({
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="New Trail name…"
-                  className="flex-1 rounded-lg border border-line bg-paper px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent"
+                  className={`flex-1 rounded-lg border px-2.5 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-accent ${
+                    dark ? "" : "border-line bg-paper"
+                  }`}
+                  style={dark ? { background: DARK.bgHover, borderColor: DARK.border, color: DARK.text } : undefined}
                 />
                 <button
                   type="submit"
-                  className="rounded-lg bg-accent px-2.5 py-1.5 text-sm font-medium text-paper-raised hover:bg-accent-deep"
+                  className={`rounded-lg px-2.5 py-1.5 text-sm font-medium ${dark ? "" : "bg-accent text-paper-raised hover:bg-accent-deep"}`}
+                  style={dark ? { background: DARK.accent, color: "#0b1220" } : undefined}
                 >
                   Create
                 </button>
@@ -78,7 +105,8 @@ export function TrailPicker({
             ) : (
               <button
                 onClick={() => setCreating(true)}
-                className="w-full rounded-xl px-2.5 py-2 text-left text-sm text-accent-deep hover:bg-paper-deep"
+                className={`w-full rounded-xl px-2.5 py-2 text-left text-sm ${dark ? "" : "text-accent-deep hover:bg-paper-deep"}`}
+                style={dark ? { color: DARK.accent } : undefined}
               >
                 New Trail…
               </button>

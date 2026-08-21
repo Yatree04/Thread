@@ -21,7 +21,7 @@ export function getContinueCardData(
     .sort((a, b) => b.lastActiveAt - a.lastActiveAt);
 
   if (wakeMode === "low") {
-    const low = eligible.find((t) => t.confidence === "low") ?? eligible[0];
+    const low = eligible.find((t) => t.confidence < 65) ?? eligible[0];
     return low ? { mode: "single", trails: [low] } : { mode: "none", trails: [] };
   }
 

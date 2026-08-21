@@ -27,11 +27,12 @@ function baseOptions(extra) {
   };
 }
 
-/** Small always-on-top glance widget, bottom-left of the primary display — spec's Widget surface. */
+/** Small always-on-top glance widget, bottom-left of the primary display — spec's Widget surface.
+ * Tall enough to fit the streak/continuity popup above the main card (reference's Widget.tsx). */
 function createWidgetWindow() {
   const { workArea } = screen.getPrimaryDisplay();
-  const width = 300;
-  const height = 230;
+  const width = 380;
+  const height = Math.min(640, workArea.height - 48);
   const win = new BrowserWindow(
     baseOptions({
       width,
@@ -52,11 +53,12 @@ function createWidgetWindow() {
   return win;
 }
 
-/** Frameless centered-top overlay used for both Continue Card and Command Overlay. */
-function createOverlayWindow() {
+/** Frameless popup for the quick-capture composer — type or attach something,
+ * real AI clustering files it. Hidden until requested from the Widget or tray. */
+function createCaptureWindow() {
   const { workArea } = screen.getPrimaryDisplay();
-  const width = 600; // fits Command Overlay's 560px-wide card with room to spare
-  const height = 600;
+  const width = 420;
+  const height = 620;
   const win = new BrowserWindow(
     baseOptions({
       width,
@@ -72,30 +74,37 @@ function createOverlayWindow() {
       hasShadow: false,
     })
   );
-  loadSurface(win, 'overlay');
+  loadSurface(win, 'capture');
+  win.on('close', (e) => {
+    e.preventDefault();
+    win.hide();
+  });
   return win;
 }
 
-/** Positioned at the right edge of the screen like a docked panel — real OS docking isn't a public API, so this approximates it. */
-function createSidePanelWindow() {
+/** Frameless centered spotlight-style window for the Query Surface — search,
+ * browse all Trails, and drill into one Trail's detail view (absorbs the old
+ * Command Overlay + Side Panel). Hidden until requested via Ctrl+K/tray/widget. */
+function createQueryWindow() {
   const { workArea } = screen.getPrimaryDisplay();
-  const width = 380; // matches SidePanel.tsx's w-[380px] exactly, so its fixed layout fills the window
+  const width = 600;
+  const height = Math.min(720, workArea.height - 80);
   const win = new BrowserWindow(
     baseOptions({
       width,
-      height: workArea.height,
-      x: workArea.x + workArea.width - width,
-      y: workArea.y,
-      frame: true,
-      title: 'Trails',
-      alwaysOnTop: false,
-      skipTaskbar: false,
+      height,
+      x: workArea.x + Math.round((workArea.width - width) / 2),
+      y: workArea.y + Math.round((workArea.height - height) / 2),
+      frame: false,
+      transparent: true,
+      resizable: false,
+      alwaysOnTop: true,
+      skipTaskbar: true,
       show: false,
-      backgroundColor: '#f6f0e6',
+      hasShadow: false,
     })
   );
-  win.setMenuBarVisibility(false);
-  loadSurface(win, 'sidepanel');
+  loadSurface(win, 'query');
   win.on('close', (e) => {
     e.preventDefault();
     win.hide();
@@ -134,8 +143,8 @@ function createSettingsWindow() {
 
 module.exports = {
   createWidgetWindow,
-  createOverlayWindow,
-  createSidePanelWindow,
+  createCaptureWindow,
+  createQueryWindow,
   createSettingsWindow,
   VITE_DEV_URL,
 };

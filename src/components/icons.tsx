@@ -46,27 +46,29 @@ export function ConfidenceDot({
   confidence,
   size = 8,
   className = "",
+  style: extraStyle,
 }: {
   confidence: Confidence;
   size?: number;
   className?: string;
+  style?: React.CSSProperties;
 }) {
-  const style = { width: size, height: size };
-  if (confidence === "high") {
+  const style = { width: size, height: size, ...extraStyle };
+  if (confidence >= 85) {
     return (
       <span
         className={`inline-block rounded-full bg-accent ${className}`}
         style={style}
-        title="High confidence"
+        title={`${confidence}% — high confidence`}
       />
     );
   }
-  if (confidence === "medium") {
+  if (confidence >= 65) {
     return (
       <span
         className={`inline-block rounded-full bg-amber ${className}`}
         style={style}
-        title="Medium confidence"
+        title={`${confidence}% — medium confidence`}
       />
     );
   }
@@ -74,7 +76,7 @@ export function ConfidenceDot({
     <span
       className={`inline-block rounded-full border-[1.5px] border-ink-faint bg-transparent ${className}`}
       style={style}
-      title="Low confidence"
+      title={`${confidence}% — low confidence`}
     />
   );
 }

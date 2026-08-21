@@ -41,7 +41,7 @@ You will be given the current list of open Trails and one newly-detected item (a
 3. "unfiled" — there's not enough signal yet to group it confidently.
 
 Respond with ONLY a single JSON object, no markdown fences, no commentary:
-{"action": "add" | "new" | "unfiled", "trailId": "<id, only if action=add>", "name": "<name, only if action=new>", "confidence": "high" | "medium" | "low", "evidence": "<short reason, e.g. 'Included: matched by content'>"}`;
+{"action": "add" | "new" | "unfiled", "trailId": "<id, only if action=add>", "name": "<name, only if action=new>", "confidence": <integer 0-100, your genuine certainty>, "evidence": "<short reason, e.g. 'Included: matched by content'>"}`;
 
 async function classifyItem({ item, trails, itemsOf }) {
   if (!client) {
@@ -80,4 +80,61 @@ async function classifyItem({ item, trails, itemsOf }) {
   }
 }
 
-module.exports = { classifyItem, setApiKey, hasApiKey: () => Boolean(client) };
+function relativeTimeServer(ts) {
+  const diffMs = Math.max(0, Date.now() - ts);
+  const min = Math.round(diffMs / 60_000);
+  if (min < 1) return 'just now';
+  if (min < 60) return `${min}m ago`;
+  const hr = Math.round(min / 60);
+  if (hr < 24) return `${hr}h ago`;
+  const day = Math.round(hr / 24);
+  return `${day}d ago`;
+}
+
+/** Honest, non-AI fallback built only from real captured data — used when there's
+ * no API key, or if the model call fails. Never invents an insight. */
+function fallbackContext({ trail, items, focusItem }) {
+  if (focusItem) {
+    return `"${focusItem.title}" was added ${relativeTimeServer(focusItem.addedAt)}. ${items.length} item${items.length === 1 ? '' : 's'} total in "${trail.name}".`;
+  }
+  if (items.length === 0) return `No items captured yet in "${trail.name}".`;
+  const last = items[items.length - 1];
+  return `${items.length} item${items.length === 1 ? '' : 's'} captured in "${trail.name}". Most recent: "${last.title}", ${relativeTimeServer(last.addedAt)}.`;
+}
+
+const CONTEXT_SYSTEM_PROMPT = `You write short, honest status blurbs (2-3 sentences, no fluff, no markdown) describing what's really going on inside one "Trail" (a bundle of a person's files/clipboard snippets/tabs), based only on the titles and details given — never invent specifics you weren't given.`;
+
+/** Real AI-generated (cached by the caller) "what's going on here" summary for
+ * the Contextualise mode — either for the whole Trail, or focused on one item. */
+async function summarizeContext({ trail, items, focusItem }) {
+  if (!client) return fallbackContext({ trail, items, focusItem });
+
+  const itemLines = items
+    .slice(-10)
+    .map((i) => `- [${i.type}] "${i.title}"${i.detail ? `: ${String(i.detail).slice(0, 200)}` : ''} (${relativeTimeServer(i.addedAt)})`)
+    .join('\n');
+
+  const userPrompt = focusItem
+    ? `Trail: "${trail.name}"\nAll items:\n${itemLines || '(none)'}\n\nFocus specifically on this one item and what it tells us:\n- "${focusItem.title}"${focusItem.detail ? `: ${String(focusItem.detail).slice(0, 300)}` : ''}`
+    : `Trail: "${trail.name}"\nItems:\n${itemLines || '(none)'}\n\nSummarize what's actively going on in this Trail.`;
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-sonnet-5',
+      max_tokens: 200,
+      system: CONTEXT_SYSTEM_PROMPT,
+      messages: [{ role: 'user', content: userPrompt }],
+    });
+    const text = response.content
+      .filter((block) => block.type === 'text')
+      .map((block) => block.text)
+      .join('')
+      .trim();
+    return text || fallbackContext({ trail, items, focusItem });
+  } catch (err) {
+    console.error('[trails] context summary call failed:', err.message || err);
+    return fallbackContext({ trail, items, focusItem });
+  }
+}
+
+module.exports = { classifyItem, summarizeContext, setApiKey, hasApiKey: () => Boolean(client) };

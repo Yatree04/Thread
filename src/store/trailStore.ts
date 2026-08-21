@@ -1,13 +1,27 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { Confidence, Lifecycle, Trail, TrailItem } from "../types";
-import { seedItems, seedTrails, nextActivityItem } from "../data/seed";
+import type { Lifecycle, MemberType, Trail, TrailItem } from "../types";
+import { seedItems, seedTrails } from "../data/seed";
 import { makeId } from "../lib/id";
 import { electronAPI, isElectron } from "../lib/electron";
 
 export type WakeMode = "auto" | "low" | "multiple" | "none";
-export type SidePanelFilter = "all" | "active" | "idle" | "archived";
-export type SidePanelSort = "recency" | "name";
+export type QueryFilter = "all" | "active" | "idle" | "archived";
+export type QuerySort = "recency" | "name";
+
+export interface CaptureDecision {
+  action: "add" | "new" | "unfiled";
+  trailId?: string;
+  name?: string;
+  confidence?: number;
+  evidence?: string;
+}
+
+export interface CaptureResult {
+  decision: CaptureDecision;
+  itemId: string;
+  trailId: string | null;
+}
 
 interface Toast {
   id: string;
@@ -28,12 +42,15 @@ interface TrailState {
   wakeMode: WakeMode;
   continueCardResolved: boolean;
 
-  sidePanelOpen: boolean;
-  sidePanelFilter: SidePanelFilter;
-  sidePanelSort: SidePanelSort;
-  expandedTrailId: string | null;
+  // Query Surface — merges the old Command Overlay (search) + Side Panel (browse/manage)
+  queryOpen: boolean;
+  queryFilter: QueryFilter;
+  querySort: QuerySort;
+  queryDetailTrailId: string | null;
 
-  commandOverlayOpen: boolean;
+  // Capture Surface — quick-capture composer
+  captureOpen: boolean;
+
   contextMenu: { itemId: string; x: number; y: number } | null;
   pendingMerge: PendingMerge | null;
   pendingItemPicker: { itemId: string } | null;
@@ -44,7 +61,7 @@ interface TrailState {
   itemsOf: (trailId: string) => TrailItem[];
   activeTrails: () => Trail[];
 
-  // Continue Card / wake
+  // Continue Card / wake (now lives inside the Widget's continuity popup)
   setWakeMode: (mode: WakeMode) => void;
   simulateWake: (mode?: WakeMode) => void;
   dismissContinueCard: () => void;
@@ -52,12 +69,19 @@ interface TrailState {
   notATrail: (trailId: string) => void;
   confirmLowConfidence: (trailId: string) => void;
 
-  // Side panel / CRUD
-  openSidePanel: (trailId?: string) => void;
-  closeSidePanel: () => void;
-  setSidePanelFilter: (f: SidePanelFilter) => void;
-  setSidePanelSort: (s: SidePanelSort) => void;
-  toggleExpanded: (trailId: string) => void;
+  // Query Surface
+  openQuery: (trailId?: string) => void;
+  closeQuery: () => void;
+  setQueryFilter: (f: QueryFilter) => void;
+  setQuerySort: (s: QuerySort) => void;
+  openQueryDetail: (trailId: string) => void;
+  closeQueryDetail: () => void;
+
+  // Capture Surface
+  openCapture: () => void;
+  closeCapture: () => void;
+
+  // Trail CRUD
   renameTrail: (trailId: string, name: string) => void;
   archiveTrail: (trailId: string) => void;
   undoArchive: (trailId: string) => void;
@@ -66,9 +90,13 @@ interface TrailState {
   cancelMerge: () => void;
   createTrail: (name: string, itemIds?: string[]) => string;
 
-  // Command overlay
-  openCommandOverlay: () => void;
-  closeCommandOverlay: () => void;
+  // Quick Capture — real AI clustering in Electron, a local heuristic in the browser demo
+  quickCapture: (input: {
+    text: string;
+    attachmentType?: MemberType;
+    attachmentTitle?: string;
+    attachmentDetail?: string;
+  }) => Promise<CaptureResult>;
 
   // Members
   removeMember: (itemId: string) => void;
@@ -79,9 +107,6 @@ interface TrailState {
   closeContextMenu: () => void;
   openItemPicker: (itemId: string) => void;
   closeItemPicker: () => void;
-
-  // Watchers / clustering simulation
-  simulateActivity: () => void;
 
   // Toast
   showToast: (message: string, actionLabel?: string, onAction?: () => void) => void;
@@ -113,9 +138,9 @@ export function startElectronSync() {
     }
   });
   api.onWake(() => useTrailStore.getState().setWakeMode("auto"));
-  api.onOpenCommandOverlay(() => useTrailStore.getState().openCommandOverlay());
+  api.onOpenQuery(() => useTrailStore.getState().openQuery());
   api.onExpandTrail((trailId) =>
-    useTrailStore.setState({ sidePanelOpen: true, expandedTrailId: trailId })
+    useTrailStore.setState({ queryOpen: true, queryDetailTrailId: trailId })
   );
 }
 
@@ -129,12 +154,12 @@ export const useTrailStore = create<TrailState>()(
       wakeMode: "auto",
       continueCardResolved: false,
 
-      sidePanelOpen: false,
-      sidePanelFilter: "all",
-      sidePanelSort: "recency",
-      expandedTrailId: null,
+      queryOpen: false,
+      queryFilter: "all",
+      querySort: "recency",
+      queryDetailTrailId: null,
+      captureOpen: false,
 
-      commandOverlayOpen: false,
       contextMenu: null,
       pendingMerge: null,
       pendingItemPicker: null,
@@ -148,10 +173,7 @@ export const useTrailStore = create<TrailState>()(
       simulateWake: (mode) =>
         set({ wakeMode: mode ?? get().wakeMode, continueCardResolved: false }),
 
-      dismissContinueCard: () => {
-        set({ continueCardResolved: true });
-        electronAPI?.hideOverlay();
-      },
+      dismissContinueCard: () => set({ continueCardResolved: true }),
 
       resumeTrail: (trailId) => {
         const trail = get().trails.find((t) => t.id === trailId);
@@ -167,7 +189,6 @@ export const useTrailStore = create<TrailState>()(
           `Reopening ${count} item${count === 1 ? "" : "s"} from "${trail.name}"…`
         );
         electronAPI?.dispatch("resumeTrail", { trailId });
-        electronAPI?.hideOverlay();
       },
 
       notATrail: (trailId) => {
@@ -190,30 +211,40 @@ export const useTrailStore = create<TrailState>()(
           `"${trail.name}" dismissed. Its items are available to sort manually.`
         );
         electronAPI?.dispatch("notATrail", { trailId });
-        electronAPI?.hideOverlay();
       },
 
       confirmLowConfidence: (trailId) => {
         set((s) => ({
           trails: s.trails.map((t) =>
-            t.id === trailId ? { ...t, confidence: "high" as Confidence, lifecycle: "active" as Lifecycle } : t
+            t.id === trailId ? { ...t, confidence: 90, lifecycle: "active" as Lifecycle } : t
           ),
           continueCardResolved: true,
         }));
         get().showToast("Confirmed — confidence updated.");
         electronAPI?.dispatch("confirmLowConfidence", { trailId });
-        electronAPI?.hideOverlay();
       },
 
-      openSidePanel: (trailId) => {
-        set({ sidePanelOpen: true, expandedTrailId: trailId ?? get().expandedTrailId });
-        electronAPI?.requestOpenSidePanel(trailId);
+      openQuery: (trailId) => {
+        set({ queryOpen: true, queryDetailTrailId: trailId ?? get().queryDetailTrailId });
+        electronAPI?.requestOpenQuery(trailId);
       },
-      closeSidePanel: () => set({ sidePanelOpen: false }),
-      setSidePanelFilter: (f) => set({ sidePanelFilter: f }),
-      setSidePanelSort: (s) => set({ sidePanelSort: s }),
-      toggleExpanded: (trailId) =>
-        set((s) => ({ expandedTrailId: s.expandedTrailId === trailId ? null : trailId })),
+      closeQuery: () => {
+        set({ queryOpen: false });
+        electronAPI?.hideQuery();
+      },
+      setQueryFilter: (f) => set({ queryFilter: f }),
+      setQuerySort: (s) => set({ querySort: s }),
+      openQueryDetail: (trailId) => set({ queryDetailTrailId: trailId }),
+      closeQueryDetail: () => set({ queryDetailTrailId: null }),
+
+      openCapture: () => {
+        set({ captureOpen: true });
+        electronAPI?.requestOpenCapture();
+      },
+      closeCapture: () => {
+        set({ captureOpen: false });
+        electronAPI?.hideCapture();
+      },
 
       renameTrail: (trailId, name) => {
         set((s) => ({
@@ -265,7 +296,7 @@ export const useTrailStore = create<TrailState>()(
               t.id === target.id ? { ...t, lastActiveAt: Date.now() } : t
             ),
           pendingMerge: null,
-          expandedTrailId: target.id,
+          queryDetailTrailId: target.id,
         }));
         get().showToast(`Merged "${source.name}" into "${target.name}"`);
         electronAPI?.dispatch("completeMerge", { sourceId: source.id, targetId: target.id });
@@ -276,7 +307,7 @@ export const useTrailStore = create<TrailState>()(
         const trail: Trail = {
           id,
           name,
-          confidence: "high",
+          confidence: 90,
           lifecycle: "forming",
           createdAt: Date.now(),
           lastActiveAt: Date.now(),
@@ -294,10 +325,44 @@ export const useTrailStore = create<TrailState>()(
         return id;
       },
 
-      openCommandOverlay: () => set({ commandOverlayOpen: true }),
-      closeCommandOverlay: () => {
-        set({ commandOverlayOpen: false });
-        electronAPI?.hideOverlay();
+      quickCapture: async (input) => {
+        if (isElectron && electronAPI) {
+          return electronAPI.submitCapture(input);
+        }
+
+        // Browser demo has no real backend AI to call — mirror the real
+        // pipeline's shape with a simple local heuristic, same spirit as
+        // the rest of this demo's simulated OS events.
+        const trimmed = input.text.trim();
+        const title =
+          input.attachmentTitle ||
+          (trimmed.length > 60 ? `${trimmed.slice(0, 57)}...` : trimmed) ||
+          "Quick capture";
+        const type: MemberType = input.attachmentType || "clipboard";
+        const detail = input.attachmentType ? input.text : input.attachmentDetail;
+        const lower = input.text.toLowerCase();
+        const match = get().trails.find(
+          (t) => !t.rejected && lower.includes(t.name.toLowerCase().split(" ")[0])
+        );
+        const id = makeId("item");
+
+        if (match) {
+          set((s) => ({
+            items: [
+              ...s.items,
+              { id, trailId: match.id, type, title, detail, evidence: "Included: matched by content", addedAt: Date.now() },
+            ],
+            trails: s.trails.map((t) => (t.id === match.id ? { ...t, lastActiveAt: Date.now() } : t)),
+          }));
+          get().showToast(`New activity added to "${match.name}"`);
+          return { decision: { action: "add", trailId: match.id, confidence: 88 }, itemId: id, trailId: match.id };
+        }
+
+        set((s) => ({
+          items: [...s.items, { id, trailId: null, type, title, detail, evidence: "Not yet grouped", addedAt: Date.now() }],
+        }));
+        get().showToast("New item detected — not yet grouped into a Trail");
+        return { decision: { action: "unfiled" }, itemId: id, trailId: null };
       },
 
       removeMember: (itemId) => {
@@ -329,24 +394,6 @@ export const useTrailStore = create<TrailState>()(
       closeContextMenu: () => set({ contextMenu: null }),
       openItemPicker: (itemId) => set({ pendingItemPicker: { itemId }, contextMenu: null }),
       closeItemPicker: () => set({ pendingItemPicker: null }),
-
-      simulateActivity: () => {
-        const item = nextActivityItem();
-        set((s) => ({ items: [...s.items, item] }));
-        if (item.trailId) {
-          const trail = get().trails.find((t) => t.id === item.trailId);
-          set((s) => ({
-            trails: s.trails.map((t) =>
-              t.id === item.trailId ? { ...t, lastActiveAt: Date.now() } : t
-            ),
-          }));
-          get().showToast(
-            trail ? `New activity added to "${trail.name}"` : "New activity detected"
-          );
-        } else {
-          get().showToast("New item detected — not yet grouped into a Trail");
-        }
-      },
 
       showToast: (message, actionLabel, onAction) =>
         set({ toast: { id: makeId("toast"), message, actionLabel, onAction } }),

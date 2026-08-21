@@ -12,15 +12,51 @@ export interface ElectronSettings {
   extraFolders: string[];
 }
 
+export interface ClassifyDecision {
+  action: "add" | "new" | "unfiled";
+  trailId?: string;
+  name?: string;
+  confidence?: number;
+  evidence?: string;
+}
+
+export interface CaptureResult {
+  decision: ClassifyDecision;
+  itemId: string;
+  trailId: string | null;
+}
+
+export interface ScreenshotResult {
+  path: string;
+  dataUrl: string;
+}
+
+export interface ContextSummaryResult {
+  text: string;
+  at: number;
+}
+
 export interface TrailsAPI {
   isElectron: true;
   platform: string;
   dispatch: (type: string, payload?: Record<string, unknown>) => void;
-  requestOpenSidePanel: (trailId?: string) => void;
+  requestOpenCapture: () => void;
+  requestOpenQuery: (trailId?: string) => void;
   requestOpenSettings: () => void;
-  requestOpenCommandOverlay: () => void;
-  hideOverlay: () => void;
+  hideCapture: () => void;
+  hideQuery: () => void;
   hideWidget: () => void;
+
+  submitCapture: (payload: {
+    text: string;
+    attachmentType?: TrailItem["type"];
+    attachmentTitle?: string;
+    attachmentDetail?: string;
+  }) => Promise<CaptureResult>;
+  captureScreenshot: () => Promise<ScreenshotResult | null>;
+  pickImageFile: () => Promise<string | null>;
+
+  getContextSummary: (trailId: string, itemId?: string) => Promise<ContextSummaryResult>;
 
   getSettings: () => Promise<ElectronSettings>;
   saveApiKey: (key: string) => Promise<{ ok: true }>;
@@ -30,7 +66,7 @@ export interface TrailsAPI {
 
   onState: (cb: (state: ElectronStatePayload) => void) => void;
   onWake: (cb: () => void) => void;
-  onOpenCommandOverlay: (cb: () => void) => void;
+  onOpenQuery: (cb: () => void) => void;
   onExpandTrail: (cb: (trailId: string) => void) => void;
 }
 
@@ -45,11 +81,11 @@ export const electronAPI: TrailsAPI | undefined =
 
 export const isElectron = Boolean(electronAPI);
 
-export function getSurface(): "widget" | "overlay" | "sidepanel" | "settings" | null {
+export function getSurface(): "widget" | "capture" | "query" | "settings" | null {
   if (typeof window === "undefined") return null;
   const params = new URLSearchParams(window.location.search);
   const surface = params.get("surface");
-  if (surface === "widget" || surface === "overlay" || surface === "sidepanel" || surface === "settings") {
+  if (surface === "widget" || surface === "capture" || surface === "query" || surface === "settings") {
     return surface;
   }
   return null;

@@ -4,21 +4,16 @@ import { useTrailStore } from "../store/trailStore";
 import { WaypointIcon } from "./icons";
 
 /**
- * Not part of the Trails spec — this is the "OS chrome" for the prototype.
- * Real Trails is triggered by sleep/wake, a global hotkey, and background
- * watchers; a browser tab can't observe those, so this bar gives you buttons
- * to fire the same events on demand and see every surface/state respond.
+ * Not part of the Trails spec — this is the "OS chrome" for the browser
+ * prototype. Real Trails is triggered by sleep/wake, a global hotkey, and
+ * background watchers; a browser tab can't observe those, so this bar gives
+ * you a button to fire the same wake events on demand and see the Widget's
+ * continuity popup respond. Everything else (new activity, search/browse)
+ * now has a real UI of its own — use the Capture and Query tabs above.
  */
 export function DevToolbar() {
   const [collapsed, setCollapsed] = useState(false);
   const simulateWake = useTrailStore((s) => s.simulateWake);
-  const simulateActivity = useTrailStore((s) => s.simulateActivity);
-  const openCommandOverlay = useTrailStore((s) => s.openCommandOverlay);
-  const sidePanelOpen = useTrailStore((s) => s.sidePanelOpen);
-  const toggleSidePanel = () => {
-    const s = useTrailStore.getState();
-    s.sidePanelOpen ? s.closeSidePanel() : s.openSidePanel();
-  };
 
   return (
     <div className="fixed left-6 top-20 z-[65] w-64 select-none">
@@ -34,26 +29,16 @@ export function DevToolbar() {
         </button>
         {!collapsed && (
           <div className="space-y-1.5 border-t border-line px-3.5 py-3 text-xs">
-            <p className="text-ink-faint">Continue Card (wake)</p>
+            <p className="text-ink-faint">Continuity popup (wake)</p>
             <div className="flex flex-wrap gap-1.5">
               <ToolButton onClick={() => simulateWake("auto")}>Normal</ToolButton>
               <ToolButton onClick={() => simulateWake("low")}>Low confidence</ToolButton>
               <ToolButton onClick={() => simulateWake("multiple")}>Multiple Trails</ToolButton>
               <ToolButton onClick={() => simulateWake("none")}>None recent</ToolButton>
             </div>
-            <p className="pt-1 text-ink-faint">Watchers</p>
-            <div className="flex flex-wrap gap-1.5">
-              <ToolButton onClick={simulateActivity}>New activity</ToolButton>
-            </div>
-            <p className="pt-1 text-ink-faint">Surfaces</p>
-            <div className="flex flex-wrap gap-1.5">
-              <ToolButton onClick={openCommandOverlay}>⌘K Search</ToolButton>
-              <ToolButton onClick={toggleSidePanel}>
-                {sidePanelOpen ? "Close" : "Open"} Side Panel
-              </ToolButton>
-            </div>
             <p className="pt-1.5 text-[11px] leading-snug text-ink-faint">
-              Right-click any item below to try the context menu.
+              Right-click any item below to try the context menu. Use the Capture
+              tab to add real activity, and the Query tab to search/browse/manage.
             </p>
           </div>
         )}

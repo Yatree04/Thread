@@ -30,6 +30,24 @@ function getState() {
   return { trails, items };
 }
 
+function getTrail(trailId) {
+  return trails.find((t) => t.id === trailId);
+}
+
+/** Cached AI (or honest fallback) context blurb — key is "all" or an item id. */
+function getCachedContext(trailId, key) {
+  const trail = getTrail(trailId);
+  return (trail && trail.context && trail.context[key]) || null;
+}
+
+function setCachedContext(trailId, key, text) {
+  const trail = getTrail(trailId);
+  if (!trail) return;
+  trail.context = trail.context || {};
+  trail.context[key] = { text, at: Date.now() };
+  persist();
+}
+
 /** Applies one dispatched action, mutates + persists, returns an optional toast. */
 function dispatch(type, payload = {}) {
   let toast = null;
@@ -61,7 +79,7 @@ function dispatch(type, payload = {}) {
     case 'confirmLowConfidence': {
       const trail = trails.find((t) => t.id === payload.trailId);
       if (trail) {
-        trail.confidence = 'high';
+        trail.confidence = 90;
         trail.lifecycle = 'active';
         toast = { message: 'Confirmed — confidence updated.' };
       }
@@ -104,7 +122,7 @@ function dispatch(type, payload = {}) {
       trails.unshift({
         id,
         name: payload.name,
-        confidence: 'high',
+        confidence: 90,
         lifecycle: 'forming',
         createdAt: Date.now(),
         lastActiveAt: Date.now(),
@@ -162,7 +180,7 @@ function ingestItem({ type, title, detail, evidence, decision }) {
     trails.unshift({
       id: trailId,
       name: decision.name,
-      confidence: decision.confidence || 'medium',
+      confidence: typeof decision.confidence === 'number' ? decision.confidence : 70,
       lifecycle: 'forming',
       createdAt: Date.now(),
       lastActiveAt: Date.now(),
@@ -183,7 +201,7 @@ function ingestItem({ type, title, detail, evidence, decision }) {
   });
 
   persist();
-  return { message: toastMessage };
+  return { message: toastMessage, itemId: id, trailId };
 }
 
-module.exports = { getState, dispatch, ingestItem, itemsOf };
+module.exports = { getState, dispatch, ingestItem, itemsOf, getTrail, getCachedContext, setCachedContext };

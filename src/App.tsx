@@ -3,9 +3,8 @@ import { useTrailStore, startElectronSync } from "./store/trailStore";
 import { useHotkey } from "./hooks/useHotkey";
 import { Desktop } from "./components/Desktop";
 import { Widget } from "./components/Widget";
-import { ContinueCard } from "./components/ContinueCard";
-import { CommandOverlay } from "./components/CommandOverlay";
-import { SidePanel } from "./components/SidePanel";
+import { Capture } from "./components/Capture";
+import { Query } from "./components/Query";
 import { ContextMenu } from "./components/ContextMenu";
 import { ToastHost } from "./components/Toast";
 import { DevToolbar } from "./components/DevToolbar";
@@ -16,8 +15,8 @@ import { getSurface } from "./lib/electron";
 export default function App() {
   const surface = getSurface();
   if (surface === "widget") return <ElectronWidgetWindow />;
-  if (surface === "overlay") return <ElectronOverlayWindow />;
-  if (surface === "sidepanel") return <ElectronSidePanelWindow />;
+  if (surface === "capture") return <ElectronCaptureWindow />;
+  if (surface === "query") return <ElectronQueryWindow />;
   if (surface === "settings") return <Settings />;
   return <BrowserDemo />;
 }
@@ -33,28 +32,26 @@ function ElectronWidgetWindow() {
   );
 }
 
-/** Shared frameless overlay window — shows the Continue Card on real
- * sleep/wake, and the Command Overlay on the real global ⌘K/Ctrl+K hotkey. */
-function ElectronOverlayWindow() {
+/** The quick-capture composer — its own real OS window, opened on demand. */
+function ElectronCaptureWindow() {
   useEffect(() => startElectronSyncOnce(), []);
   return (
     <div className="h-screen w-screen bg-transparent">
-      <ContinueCard />
-      <CommandOverlay />
+      <Capture />
+      <ToastHost />
     </div>
   );
 }
 
-/** The real, always-available Side Panel — its own docked-right OS window. */
-function ElectronSidePanelWindow() {
+/** The Query Surface — search, browse, and manage Trails — its own real OS window. */
+function ElectronQueryWindow() {
   useEffect(() => {
     startElectronSyncOnce();
-    useTrailStore.setState({ sidePanelOpen: true });
+    useTrailStore.setState({ queryOpen: true });
   }, []);
   return (
-    <div className="trail-texture h-screen w-screen bg-paper">
-      <SidePanel />
-      <ContextMenu />
+    <div className="h-screen w-screen bg-transparent">
+      <Query />
       <ToastHost />
     </div>
   );
@@ -68,17 +65,19 @@ function startElectronSyncOnce() {
 }
 
 /** The original browser-tab prototype — every surface floating over a mock
- * desktop, driven by scripted/simulated data. Runs when opened as a plain
- * browser tab (no ?surface= param), e.g. via `npm run dev`. */
+ * desktop, driven by the same real store every other surface reads. Runs
+ * when opened as a plain browser tab (no ?surface= param), e.g. via `npm run dev`. */
 function BrowserDemo() {
-  const openCommandOverlay = useTrailStore((s) => s.openCommandOverlay);
-  const closeCommandOverlay = useTrailStore((s) => s.closeCommandOverlay);
-  const commandOverlayOpen = useTrailStore((s) => s.commandOverlayOpen);
-  const sidePanelOpen = useTrailStore((s) => s.sidePanelOpen);
+  const queryOpen = useTrailStore((s) => s.queryOpen);
+  const captureOpen = useTrailStore((s) => s.captureOpen);
+  const openQuery = useTrailStore((s) => s.openQuery);
+  const closeQuery = useTrailStore((s) => s.closeQuery);
+  const openCapture = useTrailStore((s) => s.openCapture);
+  const closeCapture = useTrailStore((s) => s.closeCapture);
 
   useHotkey("k", () => {
     const s = useTrailStore.getState();
-    s.commandOverlayOpen ? s.closeCommandOverlay() : s.openCommandOverlay();
+    s.queryOpen ? s.closeQuery() : s.openQuery();
   });
 
   return (
@@ -88,26 +87,48 @@ function BrowserDemo() {
           <WaypointIcon size={16} className="text-ink" />
           <span className="font-serif-display text-base text-ink">Trails</span>
           <span className="hidden text-xs text-ink-faint sm:inline">
-            — a working prototype of the full system spec
+            — Widget, Capture, and Query: three surfaces, click through them
           </span>
         </div>
-        <button
-          onClick={() => (commandOverlayOpen ? closeCommandOverlay() : openCommandOverlay())}
-          className="rounded-full border border-line bg-paper-raised px-3 py-1.5 text-xs text-ink-soft hover:border-accent-soft"
-        >
-          ⌘K / Ctrl+K to search
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => (captureOpen ? closeCapture() : openCapture())}
+            className="rounded-full border border-line bg-paper-raised px-3 py-1.5 text-xs text-ink-soft hover:border-accent-soft"
+          >
+            + Capture
+          </button>
+          <button
+            onClick={() => (queryOpen ? closeQuery() : openQuery())}
+            className="rounded-full border border-line bg-paper-raised px-3 py-1.5 text-xs text-ink-soft hover:border-accent-soft"
+          >
+            ⌘K / Ctrl+K to search
+          </button>
+        </div>
       </header>
 
-      <main className={sidePanelOpen ? "mr-[380px] transition-[margin]" : "transition-[margin]"}>
+      <main>
         <Desktop />
       </main>
 
-      <Widget />
+      <div className="fixed bottom-6 left-6 z-40 h-[600px] w-[380px]">
+        <Widget />
+      </div>
+
+      {captureOpen && (
+        <div
+          className="fixed inset-0 z-[92] flex items-start justify-center bg-ink/30 pt-14"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeCapture();
+          }}
+        >
+          <div className="h-[620px] w-[420px]">
+            <Capture />
+          </div>
+        </div>
+      )}
+
+      <Query />
       <DevToolbar />
-      <ContinueCard />
-      <CommandOverlay />
-      <SidePanel />
       <ContextMenu />
       <ToastHost />
     </div>
