@@ -6,10 +6,10 @@ contextBridge.exposeInMainWorld('trailsAPI', {
 
   // Actions -> main (main is the single source of truth, spec 0.3/0.4)
   dispatch: (type, payload) => ipcRenderer.send('dispatch', { type, payload }),
-  requestOpenCapture: () => ipcRenderer.send('request-open-capture'),
+  expandCapture: () => ipcRenderer.send('expand-capture'),
+  collapseCapture: () => ipcRenderer.send('collapse-capture'),
   requestOpenQuery: (trailId) => ipcRenderer.send('request-open-query', { trailId }),
   requestOpenSettings: () => ipcRenderer.send('request-open-settings'),
-  hideCapture: () => ipcRenderer.send('hide-capture'),
   hideQuery: () => ipcRenderer.send('hide-query'),
   hideWidget: () => ipcRenderer.send('hide-widget'),
 
@@ -33,4 +33,5 @@ contextBridge.exposeInMainWorld('trailsAPI', {
   onWake: (cb) => ipcRenderer.on('wake', () => cb()),
   onOpenQuery: (cb) => ipcRenderer.on('open-query', () => cb()),
   onExpandTrail: (cb) => ipcRenderer.on('expand-trail', (_e, trailId) => cb(trailId)),
+  onCaptureExpandedChanged: (cb) => ipcRenderer.on('capture-expanded', (_e, expanded) => cb(expanded)),
 });

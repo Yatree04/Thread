@@ -34,13 +34,14 @@ function ElectronWidgetWindow() {
   );
 }
 
-/** The quick-capture composer — its own real OS window, opened on demand. */
+/** The quick-capture composer — its own real OS window, forever present as a
+ * floating "+" bubble that resizes in place when expanded. No toasts here
+ * either: filing feedback lives inline in each note's own status line. */
 function ElectronCaptureWindow() {
   useEffect(() => startElectronSyncOnce(), []);
   return (
     <div className="h-screen w-screen bg-transparent">
       <Capture />
-      <ToastHost />
     </div>
   );
 }
@@ -71,11 +72,9 @@ function startElectronSyncOnce() {
  * when opened as a plain browser tab (no ?surface= param), e.g. via `npm run dev`. */
 function BrowserDemo() {
   const queryOpen = useTrailStore((s) => s.queryOpen);
-  const captureOpen = useTrailStore((s) => s.captureOpen);
+  const captureExpanded = useTrailStore((s) => s.captureExpanded);
   const openQuery = useTrailStore((s) => s.openQuery);
   const closeQuery = useTrailStore((s) => s.closeQuery);
-  const openCapture = useTrailStore((s) => s.openCapture);
-  const closeCapture = useTrailStore((s) => s.closeCapture);
 
   useHotkey("k", () => {
     const s = useTrailStore.getState();
@@ -92,42 +91,31 @@ function BrowserDemo() {
             — Widget, Capture, and Query: three surfaces, click through them
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => (captureOpen ? closeCapture() : openCapture())}
-            className="rounded-full border border-line bg-paper-raised px-3 py-1.5 text-xs text-ink-soft hover:border-accent-soft"
-          >
-            + Capture
-          </button>
-          <button
-            onClick={() => (queryOpen ? closeQuery() : openQuery())}
-            className="rounded-full border border-line bg-paper-raised px-3 py-1.5 text-xs text-ink-soft hover:border-accent-soft"
-          >
-            ⌘K / Ctrl+K to search
-          </button>
-        </div>
+        <button
+          onClick={() => (queryOpen ? closeQuery() : openQuery())}
+          className="rounded-full border border-line bg-paper-raised px-3 py-1.5 text-xs text-ink-soft hover:border-accent-soft"
+        >
+          ⌘K / Ctrl+K to search
+        </button>
       </header>
 
       <main>
         <Desktop />
       </main>
 
-      <div className="fixed bottom-6 left-6 z-40 h-[600px] w-[380px]">
+      {/* Widget: pinned top-right, always present — matches the real desktop app. */}
+      <div className="fixed right-6 top-6 z-40 h-[460px] w-[300px]">
         <Widget />
       </div>
 
-      {captureOpen && (
-        <div
-          className="fixed inset-0 z-[92] flex items-start justify-center bg-ink/30 pt-14"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) closeCapture();
-          }}
-        >
-          <div className="h-[620px] w-[420px]">
-            <Capture />
-          </div>
-        </div>
-      )}
+      {/* Capture: forever-floating "+" bubble, stacked below the Widget — never
+       * a conditionally-mounted overlay, since it's meant to always be there. */}
+      <div
+        className={`fixed right-6 z-40 transition-all ${captureExpanded ? "h-[520px] w-[360px]" : "h-14 w-14"}`}
+        style={{ top: 500 }}
+      >
+        <Capture />
+      </div>
 
       <Query />
       <DevToolbar />

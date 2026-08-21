@@ -40,10 +40,10 @@ export interface TrailsAPI {
   isElectron: true;
   platform: string;
   dispatch: (type: string, payload?: Record<string, unknown>) => void;
-  requestOpenCapture: () => void;
+  expandCapture: () => void;
+  collapseCapture: () => void;
   requestOpenQuery: (trailId?: string) => void;
   requestOpenSettings: () => void;
-  hideCapture: () => void;
   hideQuery: () => void;
   hideWidget: () => void;
 
@@ -68,6 +68,7 @@ export interface TrailsAPI {
   onWake: (cb: () => void) => void;
   onOpenQuery: (cb: () => void) => void;
   onExpandTrail: (cb: (trailId: string) => void) => void;
+  onCaptureExpandedChanged: (cb: (expanded: boolean) => void) => void;
 }
 
 declare global {

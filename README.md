@@ -54,14 +54,18 @@ This starts the Vite dev server and the Electron app together. You should see:
   widget, not always-on-top: open or focus any other window and it gets
   covered, the same way a desktop icon would, resurfacing once nothing else
   is over that part of the screen. No close button, no notification popups
-  on it — just the glance card, a trail switcher, and Revive / Contextualise
-  modes. On first launch it comes pre-loaded with a couple of
-  clearly-labelled **example** Trails ("Example: Pricing Page Redesign",
-  etc.) so there's something to click through immediately — this happens
-  exactly once, never again after that.
+  on it — just the glance card (a row of the Trail's items you can tap to
+  focus the AI context blurb on, expandable via the chevron) and two actions,
+  Revive workspace / capture. On first launch it comes pre-loaded with a
+  couple of clearly-labelled **example** Trails ("Example: Pricing Page
+  Redesign", etc.) so there's something to click through immediately — this
+  happens exactly once, never again after that.
+- A small floating **+** bubble appear near the Widget — that's **Capture**.
+  It never fully closes either; it's a real desktop fixture just like the
+  Widget, sitting there until you click it.
 - A **Trails** tray icon appear in your system tray.
-- Nothing else visible — **Capture** and **Query** are their own windows,
-  hidden until you open them (see below).
+- Nothing else visible — **Query** is its own window, hidden until you open
+  it (see below).
 
 ### 4. (Optional) Install the browser-tab extension
 
@@ -99,13 +103,19 @@ app can't see your browser's tabs on its own:
   the last grouping was — either a "View context" button, a low-confidence
   "Looks right? Yes/No" confirm, or a "Pick up where you left off" chooser
   across a few candidate Trails.
-- Click the **+** on the Widget (or "Quick Capture" from the tray) to open
-  **Capture**, docked to the right edge of your screen — type a note, or
-  attach a real screenshot (`desktopCapturer`), a real local image file, or a
-  link, and it's filed through the same real clustering pipeline as the
-  watchers. If the model isn't confident, you pick the Trail yourself instead
-  of it guessing. The **–** button minimizes it to a small pull-tab (your
-  draft is kept, nothing is lost) instead of fully closing it.
+- Click the floating **+** bubble (or the Widget's "capture" button, or
+  "Quick Capture" from the tray) — it resizes itself in place into the full
+  composer (a real `BrowserWindow.setBounds()` call, not a CSS trick, so it
+  never occupies more screen or intercepts more clicks than it visually
+  shows). Type a note, or attach a real screenshot (`desktopCapturer`), a
+  real local image file, or a link — Enter (or the small arrow in the
+  textarea's corner) files it through the same real clustering pipeline as
+  the watchers. Each note renders as its own card with the real filing
+  outcome shown inline (not a chat bubble — this is meant to feel like
+  jotting a note to yourself, not messaging a bot); if the model isn't
+  confident, you pick the Trail yourself right there instead of it guessing.
+  The chevron shrinks it back down to the bubble — your draft is kept,
+  nothing is lost.
 - Inside **Query**: search, "Proactive resurfacing", all Trails (with
   Active/Idle/Archived filters), recently viewed, and an **Inbox** of
   anything the watchers picked up that isn't confidently grouped yet —

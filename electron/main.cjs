@@ -34,6 +34,8 @@ const {
   createCaptureWindow,
   createQueryWindow,
   createSettingsWindow,
+  captureBubbleBounds,
+  captureExpandedBounds,
 } = require('./windows.cjs');
 
 let widgetWindow = null;
@@ -53,16 +55,6 @@ function broadcastState(toast) {
   });
 }
 
-function ensureCaptureWindow() {
-  if (!captureWindow || captureWindow.isDestroyed()) {
-    captureWindow = createCaptureWindow();
-    captureWindow.webContents.on('did-finish-load', () => {
-      captureWindow.webContents.send('state', store.getState());
-    });
-  }
-  return captureWindow;
-}
-
 function ensureSettingsWindow() {
   if (!settingsWindow || settingsWindow.isDestroyed()) {
     settingsWindow = createSettingsWindow();
@@ -70,10 +62,25 @@ function ensureSettingsWindow() {
   return settingsWindow;
 }
 
-function showCapture() {
-  const win = ensureCaptureWindow();
-  win.show();
-  win.focus();
+/** Grows the Capture bubble into the full composer in place (real
+ * setBounds, not a CSS trick) and gives it focus so typing works immediately.
+ * Also tells the Capture window's own renderer to switch to composer view —
+ * it's a separate process from whichever window triggered this (Widget,
+ * tray), so resizing the OS window alone wouldn't change what it renders. */
+function expandCapture() {
+  if (!captureWindow || captureWindow.isDestroyed()) return;
+  captureWindow.setBounds(captureExpandedBounds());
+  captureWindow.webContents.send('capture-expanded', true);
+  captureWindow.show();
+  captureWindow.focus();
+}
+
+/** Shrinks Capture back down to the floating "+" bubble — it never fully
+ * hides, the same way the Widget never fully closes. */
+function collapseCapture() {
+  if (!captureWindow || captureWindow.isDestroyed()) return;
+  captureWindow.setBounds(captureBubbleBounds());
+  captureWindow.webContents.send('capture-expanded', false);
 }
 
 /** The Query Surface — search, browse all Trails, and drill into detail.
@@ -119,7 +126,7 @@ function rebuildTrayMenu() {
   const widgetVisible = Boolean(widgetWindow && !widgetWindow.isDestroyed() && widgetWindow.isVisible());
   tray.setContextMenu(
     Menu.buildFromTemplate([
-      { label: 'Quick Capture', click: showCapture },
+      { label: 'Quick Capture', click: expandCapture },
       {
         label: widgetVisible ? 'Hide Widget' : 'Show Widget',
         click: () => {
@@ -160,9 +167,11 @@ function rebuildTrayMenu() {
 
 app.whenReady().then(() => {
   widgetWindow = createWidgetWindow();
+  captureWindow = createCaptureWindow();
   queryWindow = createQueryWindow();
 
   widgetWindow.webContents.on('did-finish-load', () => widgetWindow.webContents.send('state', store.getState()));
+  captureWindow.webContents.on('did-finish-load', () => captureWindow.webContents.send('state', store.getState()));
   queryWindow.webContents.on('did-finish-load', () => queryWindow.webContents.send('state', store.getState()));
   widgetWindow.on('show', rebuildTrayMenu);
   widgetWindow.on('hide', rebuildTrayMenu);
@@ -172,9 +181,7 @@ app.whenReady().then(() => {
     broadcastState(toast);
   });
 
-  ipcMain.on('hide-capture', () => {
-    if (captureWindow && !captureWindow.isDestroyed()) captureWindow.hide();
-  });
+  ipcMain.on('collapse-capture', collapseCapture);
 
   ipcMain.on('hide-query', () => {
     if (queryWindow && !queryWindow.isDestroyed()) queryWindow.hide();
@@ -184,7 +191,7 @@ app.whenReady().then(() => {
     if (widgetWindow && !widgetWindow.isDestroyed()) widgetWindow.hide();
   });
 
-  ipcMain.on('request-open-capture', showCapture);
+  ipcMain.on('expand-capture', expandCapture);
 
   ipcMain.on('request-open-query', (_e, { trailId } = {}) => showQuery(trailId));
 

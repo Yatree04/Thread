@@ -57,39 +57,49 @@ function createWidgetWindow() {
   return win;
 }
 
-/** Docked to the right edge of the screen for the quick-capture composer —
- * type or attach something, real AI clustering files it. The window itself
- * stays a fixed slim strip; the page inside toggles between a collapsed
- * "peek" tab and the full composer, so it can be minimized without fully
- * closing (and losing whatever's half-typed). Hidden until requested from
- * the Widget's + button or the tray. */
-function createCaptureWindow() {
+const CAPTURE_BUBBLE_SIZE = 56;
+const CAPTURE_EXPANDED_WIDTH = 360;
+
+/** Bounds for the collapsed floating "+" bubble and the expanded composer —
+ * both anchored to the same top-right corner (stacked below the pinned
+ * Widget) so expanding grows the window down-and-left from that corner,
+ * rather than the bubble and the composer occupying different spots. */
+function captureBubbleBounds() {
   const { workArea } = screen.getPrimaryDisplay();
-  const width = 360;
-  // Stacks below the pinned Widget (top-right, ~460px tall) on the same right
-  // edge, rather than overlapping it.
   const top = workArea.y + 20 + 460 + 16;
+  const rightEdge = workArea.x + workArea.width - 20;
+  return { x: rightEdge - CAPTURE_BUBBLE_SIZE, y: top, width: CAPTURE_BUBBLE_SIZE, height: CAPTURE_BUBBLE_SIZE };
+}
+
+function captureExpandedBounds() {
+  const { workArea } = screen.getPrimaryDisplay();
+  const top = workArea.y + 20 + 460 + 16;
+  const rightEdge = workArea.x + workArea.width - 20;
   const height = Math.max(360, workArea.height - (top - workArea.y) - 20);
+  return { x: rightEdge - CAPTURE_EXPANDED_WIDTH, y: top, width: CAPTURE_EXPANDED_WIDTH, height };
+}
+
+/** The quick-capture composer — type or attach something, real AI clustering
+ * files it. Never fully hidden: it's a real desktop fixture like the Widget,
+ * starting as a small floating "+" bubble and resizing (via setBounds, not a
+ * CSS trick) to the full composer when expanded, so it never occupies more
+ * screen space — or intercepts more clicks — than it visually shows. */
+function createCaptureWindow() {
+  const bounds = captureBubbleBounds();
   const win = new BrowserWindow(
     baseOptions({
-      width,
-      height,
-      x: workArea.x + workArea.width - width - 20,
-      y: top,
+      ...bounds,
       frame: false,
       transparent: true,
       resizable: false,
-      alwaysOnTop: true,
+      alwaysOnTop: false,
       skipTaskbar: true,
       show: false,
       hasShadow: false,
     })
   );
+  win.showInactive();
   loadSurface(win, 'capture');
-  win.on('close', (e) => {
-    e.preventDefault();
-    win.hide();
-  });
   return win;
 }
 
@@ -159,5 +169,7 @@ module.exports = {
   createCaptureWindow,
   createQueryWindow,
   createSettingsWindow,
+  captureBubbleBounds,
+  captureExpandedBounds,
   VITE_DEV_URL,
 };

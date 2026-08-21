@@ -49,7 +49,7 @@ interface TrailState {
   queryDetailTrailId: string | null;
 
   // Capture Surface — quick-capture composer
-  captureOpen: boolean;
+  captureExpanded: boolean;
 
   contextMenu: { itemId: string; x: number; y: number } | null;
   pendingMerge: PendingMerge | null;
@@ -78,8 +78,8 @@ interface TrailState {
   closeQueryDetail: () => void;
 
   // Capture Surface
-  openCapture: () => void;
-  closeCapture: () => void;
+  expandCapture: () => void;
+  collapseCapture: () => void;
 
   // Trail CRUD
   renameTrail: (trailId: string, name: string) => void;
@@ -142,6 +142,10 @@ export function startElectronSync() {
   api.onExpandTrail((trailId) =>
     useTrailStore.setState({ queryOpen: true, queryDetailTrailId: trailId })
   );
+  // Capture's expand/collapse is a real main-process resize (electron/main.cjs),
+  // and may be triggered from a different window (Widget, tray) than this one —
+  // this is what tells *this* renderer to switch between bubble and composer.
+  api.onCaptureExpandedChanged((expanded) => useTrailStore.setState({ captureExpanded: expanded }));
 }
 
 export const useTrailStore = create<TrailState>()(
@@ -158,7 +162,7 @@ export const useTrailStore = create<TrailState>()(
       queryFilter: "all",
       querySort: "recency",
       queryDetailTrailId: null,
-      captureOpen: false,
+      captureExpanded: false,
 
       contextMenu: null,
       pendingMerge: null,
@@ -237,13 +241,13 @@ export const useTrailStore = create<TrailState>()(
       openQueryDetail: (trailId) => set({ queryDetailTrailId: trailId }),
       closeQueryDetail: () => set({ queryDetailTrailId: null }),
 
-      openCapture: () => {
-        set({ captureOpen: true });
-        electronAPI?.requestOpenCapture();
+      expandCapture: () => {
+        set({ captureExpanded: true });
+        electronAPI?.expandCapture();
       },
-      closeCapture: () => {
-        set({ captureOpen: false });
-        electronAPI?.hideCapture();
+      collapseCapture: () => {
+        set({ captureExpanded: false });
+        electronAPI?.collapseCapture();
       },
 
       renameTrail: (trailId, name) => {

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, Check, Image as ImageIcon, Link as LinkIcon, Minus, Send, X } from "lucide-react";
+import { Camera, Check, ChevronDown, Image as ImageIcon, Link as LinkIcon, Plus, X, ArrowUp } from "lucide-react";
 import { useTrailStore } from "../store/trailStore";
-import { ConfidenceDot, MemberTypeIcon, WaypointIcon } from "./icons";
+import { ConfidenceDot, MemberTypeIcon } from "./icons";
 import { electronAPI, isElectron } from "../lib/electron";
 import type { MemberType, Trail } from "../types";
 
@@ -25,11 +25,12 @@ const TYPE_FOR_ATTACHMENT: Record<Attachment["kind"], MemberType> = {
 };
 
 /**
- * Surface — Capture (reference: CapturePanel.tsx). A conversational quick-
- * capture composer: what you type appears as your own message, and the app
- * "replies" underneath with where it actually landed — filed under a Trail,
- * or a real pick-a-Trail prompt when the AI classifier genuinely isn't sure
- * (never a fake keyword guess).
+ * Surface — Capture (reference: CapturePanel.tsx). A forever-floating "+"
+ * bubble, like a real desktop fixture — click it and start typing. What you
+ * write is filed through the real clustering pipeline in the background; the
+ * AI decides where it goes, and only nudges you to pick a Trail yourself when
+ * it genuinely isn't sure (never a fake keyword guess, never always-ask).
+ * Styled as a place to jot notes to yourself, not a chat with a bot.
  */
 export function Capture() {
   const trails = useTrailStore((s) => s.trails);
@@ -37,8 +38,10 @@ export function Capture() {
   const quickCapture = useTrailStore((s) => s.quickCapture);
   const moveMember = useTrailStore((s) => s.moveMember);
   const createTrail = useTrailStore((s) => s.createTrail);
+  const expanded = useTrailStore((s) => s.captureExpanded);
+  const expandCapture = useTrailStore((s) => s.expandCapture);
+  const collapseCapture = useTrailStore((s) => s.collapseCapture);
 
-  const [minimized, setMinimized] = useState(false);
   const [text, setText] = useState("");
   const [attachment, setAttachment] = useState<Attachment | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
@@ -53,6 +56,10 @@ export function Capture() {
   }, [thread.length]);
 
   const canSubmit = text.trim().length > 0 || attachment !== null;
+  const hasDraft = text.trim().length > 0 || attachment !== null;
+
+  const expand = () => (isElectron ? electronAPI!.expandCapture() : expandCapture());
+  const collapse = () => (isElectron ? electronAPI!.collapseCapture() : collapseCapture());
 
   async function handleScreenshot() {
     if (!isElectron || !electronAPI) return;
@@ -109,53 +116,36 @@ export function Capture() {
     setAttachment(null);
   }
 
-  // Minimized state: a small pull-tab docked at the top of the window, so
-  // Capture can be tucked out of the way without losing whatever's half-typed
-  // (draft text/attachment stay in state) and without fully closing it.
-  if (minimized) {
-    const preview = text.trim() || attachment?.label;
+  // Idle state: just a small floating "+" — a real desktop fixture, not a
+  // notification. Click it to start typing; a soft dot shows a draft is
+  // waiting if you collapsed mid-thought.
+  if (!expanded) {
     return (
-      <div className="flex h-full items-start justify-end p-3">
+      <div className="flex h-full w-full items-center justify-center">
         <button
-          onClick={() => setMinimized(false)}
-          className="paper-card trail-texture flex max-w-[220px] items-center gap-2 rounded-full px-3 py-2 shadow-lg hover:brightness-95"
+          onClick={expand}
+          className="paper-card relative flex h-12 w-12 items-center justify-center rounded-full text-ink-soft hover:text-ink"
+          aria-label="Capture a note"
+          title="Capture a note"
         >
-          <WaypointIcon size={13} />
-          <span className="min-w-0 flex-1 truncate text-[11px] font-medium text-ink">
-            {preview || "Quick Capture"}
-          </span>
-          {preview && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />}
+          <Plus size={20} />
+          {hasDraft && <span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-accent" />}
         </button>
       </div>
     );
   }
 
   return (
-    <div className="flex h-full flex-col p-3">
-      <div className="mb-2 flex items-center justify-between px-1">
-        <div className="flex items-center gap-2 text-ink-soft">
-          <WaypointIcon size={15} />
-          <span className="text-xs font-medium tracking-wide uppercase">Quick Capture</span>
-        </div>
-        <div className="flex items-center gap-0.5">
-          <button
-            onClick={() => setMinimized(true)}
-            className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
-            aria-label="Minimize"
-            title="Minimize (keeps your draft)"
-          >
-            <Minus size={14} />
-          </button>
-          {isElectron && (
-            <button
-              onClick={() => electronAPI!.hideCapture()}
-              className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
-              aria-label="Close"
-            >
-              <X size={14} />
-            </button>
-          )}
-        </div>
+    <div className="flex h-full flex-col p-2.5">
+      <div className="mb-1 flex justify-end px-0.5">
+        <button
+          onClick={collapse}
+          className="rounded-full p-1.5 text-ink-faint hover:bg-paper-deep hover:text-ink"
+          aria-label="Collapse"
+          title="Collapse"
+        >
+          <ChevronDown size={14} />
+        </button>
       </div>
 
       <div className="paper-card trail-texture flex flex-1 flex-col overflow-hidden rounded-3xl">
@@ -168,9 +158,9 @@ export function Capture() {
               </p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {thread.map((m) => (
-                <ThreadBubble
+                <NoteCard
                   key={m.itemId}
                   message={m}
                   trails={trails}
@@ -216,7 +206,7 @@ export function Capture() {
             </form>
           )}
 
-          <div className="flex items-end gap-1.5">
+          <div className="relative">
             <textarea
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -228,16 +218,16 @@ export function Capture() {
               }}
               placeholder="Type a note, paste a link, or attach something…"
               rows={2}
-              className="flex-1 resize-none rounded-2xl border border-line bg-paper-raised p-2.5 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
+              className="w-full resize-none rounded-2xl border border-line bg-paper-raised p-2.5 pr-9 text-sm text-ink placeholder:text-ink-faint focus:outline-none focus:ring-1 focus:ring-accent"
             />
             <button
               onClick={handleSubmit}
               disabled={!canSubmit || submitting}
-              aria-label="Capture"
-              title="Capture"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-ink text-paper disabled:opacity-40"
+              aria-label="Send"
+              title="Send (Enter)"
+              className="absolute bottom-2 right-2 flex h-5 w-5 items-center justify-center rounded-full text-ink-faint hover:text-ink disabled:opacity-30"
             >
-              <Send size={14} />
+              <ArrowUp size={13} />
             </button>
           </div>
 
@@ -253,10 +243,10 @@ export function Capture() {
   );
 }
 
-/** One turn of the conversation: your capture as an outgoing bubble, with the
- * app's real filing outcome as a reply underneath — live (reads the current
- * store), not a snapshot, so it stays correct if you later resolve it manually. */
-function ThreadBubble({
+/** One captured note — a single self-contained card (not a two-party chat
+ * bubble): your text, and a small status line showing where it actually
+ * landed, live from the store, not a snapshot. */
+function NoteCard({
   message,
   trails,
   items,
@@ -273,18 +263,16 @@ function ThreadBubble({
   const trail = liveItem?.trailId ? trails.find((t) => t.id === liveItem.trailId) : null;
 
   return (
-    <div className="flex flex-col items-end gap-1">
-      <div className="max-w-[88%] rounded-2xl rounded-br-md bg-ink px-3 py-1.5 text-[12px] text-paper">
-        {message.text}
-      </div>
+    <div className="rounded-2xl border border-line bg-paper-raised px-3 py-2">
+      <p className="text-[12px] leading-snug text-ink">{message.text}</p>
       {trail ? (
-        <div className="flex items-center gap-1.5 self-start rounded-2xl rounded-bl-md bg-paper-deep/70 px-2.5 py-1.5 text-[11px] text-ink-soft">
-          <Check size={11} className="shrink-0 text-good" />
-          Filed under <span className="font-medium text-ink">{trail.name}</span>
+        <div className="mt-1 flex items-center gap-1 text-[10px] text-ink-faint">
+          <Check size={10} className="shrink-0 text-good" />
+          Filed under <span className="font-medium text-ink-soft">{trail.name}</span>
         </div>
       ) : message.ambiguous ? (
-        <div className="w-[88%] self-start rounded-2xl rounded-bl-md bg-paper-deep/70 p-2.5">
-          <p className="mb-1.5 text-[11px] text-ink-soft">
+        <div className="mt-1.5">
+          <p className="mb-1 text-[10px] text-ink-faint">
             Not sure where this goes{message.suggestedName ? ` — maybe "${message.suggestedName}"?` : ""}
           </p>
           <InlineTrailPicker
@@ -295,9 +283,7 @@ function ThreadBubble({
           />
         </div>
       ) : (
-        <div className="self-start rounded-2xl rounded-bl-md bg-paper-deep/70 px-2.5 py-1.5 text-[11px] text-ink-faint">
-          Not yet grouped
-        </div>
+        <p className="mt-1 text-[10px] text-ink-faint">Not yet grouped</p>
       )}
     </div>
   );
@@ -329,7 +315,7 @@ function InlineTrailPicker({
             onPick(t.id);
             setResolved(true);
           }}
-          className="flex w-full items-center gap-1.5 rounded-lg bg-paper-raised px-2 py-1 text-left hover:brightness-95"
+          className="flex w-full items-center gap-1.5 rounded-lg bg-paper-deep/60 px-2 py-1 text-left hover:brightness-95"
         >
           <ConfidenceDot confidence={t.confidence} size={5} />
           <span className="truncate text-[11px] text-ink">{t.name}</span>
