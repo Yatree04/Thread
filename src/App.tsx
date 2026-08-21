@@ -21,13 +21,15 @@ export default function App() {
   return <BrowserDemo />;
 }
 
-/** The desktop app's floating glance widget — its own real OS window. */
+/** The desktop app's floating glance widget — its own real OS window. No
+ * toasts here on purpose: a pinned desktop widget shouldn't pop notifications
+ * over itself — see Query/Capture for where feedback like "Trail archived"
+ * or "Added to X" actually surfaces. */
 function ElectronWidgetWindow() {
   useEffect(() => startElectronSyncOnce(), []);
   return (
     <div className="h-screen w-screen bg-transparent">
       <Widget />
-      <ToastHost />
     </div>
   );
 }

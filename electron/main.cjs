@@ -124,12 +124,12 @@ function rebuildTrayMenu() {
         label: widgetVisible ? 'Hide Widget' : 'Show Widget',
         click: () => {
           if (!widgetWindow || widgetWindow.isDestroyed()) return;
-          widgetVisible ? widgetWindow.hide() : widgetWindow.show();
+          widgetVisible ? widgetWindow.hide() : widgetWindow.showInactive();
           rebuildTrayMenu();
         },
       },
       { type: 'separator' },
-      { label: 'Search Trails: press Win+K', enabled: false },
+      { label: 'Search Trails: press Ctrl+Alt+K', enabled: false },
       {
         label: clustering.hasApiKey() ? 'AI clustering: connected' : 'AI clustering: no API key set',
         enabled: false,
@@ -276,20 +276,19 @@ app.whenReady().then(() => {
   rebuildTrayMenu();
   tray.on('click', () => {
     if (!widgetWindow || widgetWindow.isDestroyed()) return;
-    widgetWindow.isVisible() ? widgetWindow.hide() : widgetWindow.show();
+    widgetWindow.isVisible() ? widgetWindow.hide() : widgetWindow.showInactive();
   });
 
-  // Win+K (Cmd+K on macOS, via Electron's "Super" modifier) is the *only*
-  // way Query opens — a deliberate "jump to search" gesture, not a button.
-  // On Windows, Win+K is also a reserved OS shortcut (Connect/Cast) on some
-  // versions — if another app or the OS already owns it, registration fails
-  // silently unless we check, so warn loudly rather than leave it a mystery.
-  const hotkeyOk = globalShortcut.register('Super+K', () => showQuery());
+  // Ctrl+Alt+K is the *only* way Query opens — a deliberate "jump to search"
+  // gesture, not a button. (Win+K was tried first, per an earlier request,
+  // but Windows and various OEM tools reserve it for their own Connect/Cast/
+  // capture panels — it never reliably reached this app, so it's been
+  // dropped in favor of a combo nothing else claims.)
+  const hotkeyOk = globalShortcut.register('Control+Alt+K', () => showQuery());
   if (!hotkeyOk) {
     console.warn(
-      '\n[trails] Could not register the Win+K global hotkey — Windows or another app already owns it ' +
-        '(Win+K normally opens the "Connect"/Cast panel on Windows 10/11). By design Query has no other ' +
-        'entry point, so free up Win+K (Settings > check for conflicting apps) for it to work.\n'
+      '\n[trails] Could not register the Ctrl+Alt+K global hotkey — another app already owns it. ' +
+        'By design Query has no other entry point, so that app would need to give it up.\n'
     );
   }
   powerMonitor.on('resume', onWake);

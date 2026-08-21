@@ -15,24 +15,24 @@ export function ToastHost() {
 
   return (
     <div
-      className="fixed bottom-8 left-1/2 z-[80] animate-toast-in"
+      className="fixed bottom-8 left-1/2 z-[80] w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 animate-toast-in"
       role="status"
     >
-      <div className="paper-card flex items-center gap-3 rounded-full px-4 py-2.5 text-sm">
+      <div className="paper-card mx-auto flex w-fit max-w-full items-center gap-3 rounded-2xl px-4 py-2.5 text-sm">
         <span className="text-ink">{toast.message}</span>
         {toast.actionLabel && (
           <button
             onClick={() => {
               toast.onAction?.();
             }}
-            className="font-medium text-accent-deep hover:underline"
+            className="shrink-0 font-medium text-accent-deep hover:underline"
           >
             {toast.actionLabel}
           </button>
         )}
         <button
           onClick={clearToast}
-          className="text-ink-faint hover:text-ink"
+          className="shrink-0 text-ink-faint hover:text-ink"
           aria-label="Dismiss"
         >
           ×

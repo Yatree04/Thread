@@ -27,10 +27,12 @@ function baseOptions(extra) {
   };
 }
 
-/** Small always-on-top glance widget, pinned top-right of the primary display —
- * spec's Widget surface. Deliberately compact: this is meant to read as a
- * permanent desktop gadget (like a pinned sticky note), not a transient
- * notification, so it stays small and always present rather than fading in/out. */
+/** Small glance widget, pinned top-right of the primary display — spec's
+ * Widget surface. Deliberately NOT always-on-top: a real desktop widget sits
+ * at desktop level and gets covered the moment you open or focus any other
+ * window, the same way desktop icons do — it only shows again once nothing
+ * else is on top of that part of the screen. Shown inactive (never steals
+ * focus) so it never jumps in front of whatever you're doing. */
 function createWidgetWindow() {
   const { workArea } = screen.getPrimaryDisplay();
   const width = 300;
@@ -44,13 +46,13 @@ function createWidgetWindow() {
       frame: false,
       transparent: true,
       resizable: false,
-      alwaysOnTop: true,
+      alwaysOnTop: false,
       skipTaskbar: true,
       hasShadow: false,
+      show: false,
     })
   );
-  win.setAlwaysOnTop(true, 'floating');
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  win.showInactive();
   loadSurface(win, 'widget');
   return win;
 }

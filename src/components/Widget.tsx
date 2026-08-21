@@ -100,16 +100,6 @@ export function Widget() {
           >
             <Settings size={13} />
           </button>
-          {isElectron && (
-            <button
-              onClick={() => electronAPI!.hideWidget()}
-              className="rounded-full p-1 text-ink-faint hover:bg-paper-deep hover:text-ink"
-              aria-label="Close widget"
-              title="Hide widget (bring it back from the tray icon)"
-            >
-              <X size={13} />
-            </button>
-          )}
         </div>
       </div>
 
